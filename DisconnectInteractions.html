@@ -492,8 +492,8 @@
   let selectedQueueName = "";
 
   function saveFormToSession() {
-    sessionStorage.setItem(keys.region, document.getElementById('region').value.trim());
-    sessionStorage.setItem(keys.clientId, document.getElementById('clientId').value.trim());
+    localStorage.setItem(keys.region, document.getElementById('region').value.trim());
+    localStorage.setItem(keys.clientId, document.getElementById('clientId').value.trim());
     sessionStorage.setItem(keys.redirectUri, document.getElementById('redirectUri').value.trim());
     sessionStorage.setItem(keys.queueId, document.getElementById('queueId').value.trim());
     sessionStorage.setItem(keys.queueName, (selectedQueueName || "").trim());
@@ -509,20 +509,21 @@
   }
 
   function restoreFormFromSession() {
-    const get = (k) => sessionStorage.getItem(k);
+    const getSession = (k) => sessionStorage.getItem(k);
+    const getLocal = (k) => localStorage.getItem(k);
 
-    const region = get(keys.region);
-    const clientId = get(keys.clientId);
-    const redirectUri = get(keys.redirectUri);
-    const queueId = get(keys.queueId);
-    const queueName = get(keys.queueName);
-    const mediaType = get(keys.mediaType);
-    const dryRun = get(keys.dryRun);
-    const maxPages = get(keys.maxPages);
+    const region = getLocal(keys.region);
+    const clientId = getLocal(keys.clientId);
+    const redirectUri = getSession(keys.redirectUri);
+    const queueId = getSession(keys.queueId);
+    const queueName = getSession(keys.queueName);
+    const mediaType = getSession(keys.mediaType);
+    const dryRun = getSession(keys.dryRun);
+    const maxPages = getSession(keys.maxPages);
 
-    const queueFilter = get(keys.queueFilter);
-    const queuePageSize = get(keys.queuePageSize);
-    const queueMaxPages = get(keys.queueMaxPages);
+    const queueFilter = getSession(keys.queueFilter);
+    const queuePageSize = getSession(keys.queuePageSize);
+    const queueMaxPages = getSession(keys.queueMaxPages);
 
     if (region !== null) document.getElementById('region').value = region;
     if (clientId !== null) document.getElementById('clientId').value = clientId;
@@ -543,7 +544,7 @@
     const regionEl = document.getElementById('region');
     if (!regionEl.value.trim()) regionEl.value = "mec1.pure.cloud";
 
-    setSavedUI(region || clientId || queueId ? "Restored" : "Not saved");
+    setSavedUI((region || clientId) ? "Saved locally" : "Not saved");
     setQueuePillText(selectedQueueName, document.getElementById('queueId').value.trim());
   }
 
