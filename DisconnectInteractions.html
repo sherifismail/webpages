@@ -1,0 +1,1291 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Genesys Cloud | Queue Interaction Disconnector</title>
+  <style>
+    :root{
+      --bg: #f7f8fa;
+      --card: #ffffff;
+      --text: #111827;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --shadow: 0 8px 24px rgba(17,24,39,.08);
+      --primary: #ff4f1f;
+      --primary-dark:#e6451b;
+      --danger: #b91c1c;
+      --danger-dark:#991b1b;
+      --focus: 0 0 0 4px rgba(255,79,31,.18);
+      --radius: 14px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      --font: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--font);
+      color: var(--text);
+      background: radial-gradient(1200px 420px at 20% 0%, rgba(255,79,31,.08), transparent 55%),
+                  radial-gradient(900px 380px at 90% 0%, rgba(17,24,39,.06), transparent 50%),
+                  var(--bg);
+      line-height: 1.35;
+    }
+
+    .container { max-width: 1100px; margin: 0 auto; padding: 22px; }
+    .topbar {
+      display:flex; align-items:center; justify-content:space-between;
+      gap: 14px; padding: 14px 18px; background: rgba(255,255,255,.75);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      box-shadow: var(--shadow); backdrop-filter: blur(8px);
+      position: sticky; top: 10px; z-index: 10;
+    }
+    .brand { display:flex; align-items:center; gap: 12px; min-width: 260px; }
+    .brand img { height: 26px; width:auto; display:block; }
+    .titleBlock { display:flex; flex-direction:column; gap: 2px; }
+    .titleBlock .title { font-weight: 800; letter-spacing: .2px; }
+    .titleBlock .subtitle { color: var(--muted); font-size: 12px; }
+
+    .pillRow { display:flex; gap: 10px; flex-wrap:wrap; justify-content:flex-end; }
+    .pill {
+      display:inline-flex; align-items:center; gap: 8px;
+      padding: 6px 10px; border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.9);
+      font-size: 12px; color: var(--muted);
+    }
+    .dot { width:8px; height:8px; border-radius:999px; background:#9ca3af; }
+    .dot.ok { background: #16a34a; }
+    .dot.warn { background:#f59e0b; }
+
+    .grid { display:grid; grid-template-columns: 1fr; gap: 16px; margin-top: 16px; }
+    @media (min-width: 980px) {
+      .grid { grid-template-columns: 1.05fr .95fr; align-items:start; }
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px;
+      position: relative;
+    }
+    .card h2 { margin: 0 0 10px 0; font-size: 16px; }
+    .card h3 { margin: 0 0 10px 0; font-size: 14px; color: var(--text); }
+    .hint { color: var(--muted); font-size: 12px; }
+    .small { color: var(--muted); font-size: 12px; }
+
+    label { display:block; margin-top: 12px; font-weight: 650; font-size: 13px; }
+    input, select, textarea, button {
+      width: 100%;
+      padding: 10px 11px;
+      margin-top: 6px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #fff;
+      font-size: 14px;
+    }
+    input:focus, select:focus, textarea:focus, button:focus { outline: none; box-shadow: var(--focus); border-color: rgba(255,79,31,.55); }
+    textarea { height: 220px; resize: vertical; font-family: var(--mono); font-size: 12px; color: #0b1220; background: #fbfbfd; }
+
+    .row2 { display:grid; grid-template-columns: 1fr; gap: 12px; }
+    @media (min-width: 720px) { .row2 { grid-template-columns: 1fr 1fr; } }
+
+    .btnRow { display:flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+    .btnRow > button { flex: 1; min-width: 220px; }
+
+    button { cursor:pointer; font-weight: 700; }
+    .btnPrimary {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+    .btnPrimary:hover { background: var(--primary-dark); border-color: var(--primary-dark); }
+    .btnSecondary { background: #fff; color: var(--text); }
+    .btnSecondary:hover { background: #f9fafb; }
+    .btnDanger { background: var(--danger); border-color: var(--danger); color: #fff; }
+    .btnDanger:hover { background: var(--danger-dark); border-color: var(--danger-dark); }
+    button:disabled { opacity: .55; cursor:not-allowed; }
+
+    .sectionDivider { height: 1px; background: var(--border); margin: 14px 0; }
+
+    /* Lists */
+    .list {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-top: 10px;
+      max-height: 320px;
+      overflow: auto;
+      background: #fff;
+    }
+    .listHead {
+      display:flex; justify-content:space-between; gap: 10px;
+      align-items:center; flex-wrap:wrap;
+      margin-top: 8px;
+    }
+    .listHead .left { display:flex; align-items:center; gap: 10px; flex-wrap:wrap; }
+    .listHead input[type="checkbox"] { width:auto; margin:0; }
+    .badge { display:inline-flex; align-items:center; gap: 8px; padding: 6px 10px; border: 1px solid var(--border); border-radius:999px; font-size: 12px; color: var(--muted); background: #fff; }
+
+    .item {
+      display:flex; gap: 10px; align-items:flex-start;
+      padding: 10px; border-top: 1px solid #f1f5f9;
+    }
+    .item:first-child { border-top: none; }
+    .item input[type="checkbox"] { width:auto; margin-top: 2px; }
+    .mono { font-family: var(--mono); font-size: 12px; }
+    .meta { margin-top: 4px; font-size: 12px; color: var(--muted); }
+    .tag { display:inline-flex; align-items:center; padding: 2px 8px; border-radius:999px; border: 1px solid var(--border); font-size: 12px; color: var(--text); background: #fff; }
+    .tag.waiting { border-color: rgba(245,158,11,.35); background: rgba(245,158,11,.08); }
+    .tag.interacting { border-color: rgba(22,163,74,.35); background: rgba(22,163,74,.08); }
+
+    /* Busy overlay */
+    .overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(255,255,255,.75);
+      border-radius: var(--radius);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      z-index: 5;
+      backdrop-filter: blur(6px);
+    }
+    .overlay.show { display: flex; }
+    .spinner {
+      width: 20px; height: 20px;
+      border-radius: 999px;
+      border: 3px solid rgba(17,24,39,.15);
+      border-top-color: var(--primary);
+      animation: spin 0.85s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .overlayText { font-weight: 750; }
+    .overlaySub { color: var(--muted); font-size: 12px; margin-top: 2px; }
+
+    .footer {
+      margin-top: 16px;
+      padding: 12px 2px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="topbar">
+      <div class="brand">
+        <img alt="Genesys" src="https://www.genesys.com/wp-content/themes/genesys-kraken/logo/genesys-com-full-color.svg" />
+        <div class="titleBlock">
+          <div class="title">Queue Interaction Disconnector</div>
+          <div class="subtitle">Genesys Cloud</div>
+        </div>
+      </div>
+
+      <div class="pillRow">
+        <div class="pill"><span id="statusDot" class="dot"></span><span id="statusPill">Logged out</span></div>
+        <div class="pill"><span class="dot warn"></span><span id="queuePill">Queue: none</span></div>
+        <div class="pill"><span class="dot"></span><span id="savePill">Not saved</span></div>
+        <div class="pill"><span class="dot"></span><span id="busyPill">Idle</span></div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <!-- LEFT: Setup -->
+      <div class="card" id="setupCard">
+        <div class="overlay" id="setupOverlay">
+          <div class="spinner" aria-hidden="true"></div>
+          <div>
+            <div class="overlayText" id="setupOverlayText">Working…</div>
+            <div class="overlaySub" id="setupOverlaySub">Please wait</div>
+          </div>
+        </div>
+
+        <h2>Setup</h2>
+        <div class="hint">
+          Host this page over HTTP(S), not <span class="mono">file://</span>.
+          Example: <span class="mono">python -m http.server 8000</span>.
+        </div>
+
+        <div class="row2">
+          <div>
+              <label for="region">Region</label>
+              <select id="region">
+                <!-- Americas -->
+                <option value="mypurecloud.com">US East (N. Virginia)</option>
+                <option value="usw2.pure.cloud">US West (Oregon)</option>
+                <option value="cac1.pure.cloud">Canada (Central)</option>
+                <option value="sae1.pure.cloud">South America (São Paulo)</option>
+                <option value="mxc1.pure.cloud">Mexico (Central)</option>
+
+                <!-- US Public Sector -->
+                <option value="use2.us-gov-pure.cloud">US East 2 (Ohio) – FedRAMP</option>
+
+                <!-- EMEA -->
+                <option value="mypurecloud.ie">Europe (Ireland / Dublin)</option>
+                <option value="mypurecloud.de">Europe (Frankfurt)</option>
+                <option value="euw2.pure.cloud">Europe (London)</option>
+                <option value="euc2.pure.cloud">Europe (Zurich)</option>
+                <option value="mec1.pure.cloud">Middle East (UAE)</option>
+
+                <!-- Asia Pacific -->
+                <option value="mypurecloud.com.au">Asia Pacific (Sydney)</option>
+                <option value="mypurecloud.jp">Asia Pacific (Tokyo)</option>
+                <option value="apne2.pure.cloud">Asia Pacific (Seoul)</option>
+                <option value="aps1.pure.cloud">Asia Pacific (Mumbai)</option>
+                <option value="apne3.pure.cloud">Asia Pacific (Osaka)</option>
+                <option value="apse1.pure.cloud">Asia Pacific (Singapore)</option>
+              </select>
+              <div class="hint">This sets <span class="mono">https://login.&lt;region&gt;</span> and <span class="mono">https://api.&lt;region&gt;</span></div>
+          </div>
+          <div>
+            <label for="clientId">OAuth Client ID</label>
+            <input id="clientId" placeholder="Public (PKCE) OAuth Client ID" />
+            <div class="hint">Configure Allowed Origins + Redirect URI in the OAuth client.</div>
+          </div>
+        </div>
+
+        <label for="redirectUri">Redirect URI</label>
+        <input id="redirectUri" />
+        <div class="hint">Must match exactly what’s configured in your Genesys Cloud OAuth client.</div>
+
+        <div class="row2">
+          <div>
+            <label for="mediaType">Media type</label>
+            <select id="mediaType">
+              <option value="email" selected>email</option>
+              <option value="voice">voice</option>
+              <option value="chat">chat</option>
+              <option value="message">message</option>
+            </select>
+            <div class="hint">Disconnect endpoint is selected based on media type.</div>
+          </div>
+
+          <div>
+            <label for="dryRun">Dry run</label>
+            <select id="dryRun">
+              <option value="true" selected>true (don’t disconnect)</option>
+              <option value="false">false (disconnect)</option>
+            </select>
+            <div class="hint">Recommended: dry run first, then disconnect.</div>
+          </div>
+        </div>
+
+        <div class="sectionDivider"></div>
+
+        <h3>Queues</h3>
+        <div class="row2">
+          <div>
+            <label for="queueFilter">Filter queues (name contains)</label>
+            <input id="queueFilter" placeholder="Type to filter queues…" />
+          </div>
+          <div>
+            <label for="queueSelect">Select a queue</label>
+            <select id="queueSelect" disabled>
+              <option value="">(load queues first)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row2">
+          <div>
+            <label for="queuePageSize">Queue page size</label>
+            <select id="queuePageSize">
+              <option value="25">25</option>
+              <option value="50" selected>50</option>
+              <option value="100">100</option>
+            </select>
+          </div>
+          <div>
+            <label for="queueMaxPages">Queue max pages (safety)</label>
+            <select id="queueMaxPages">
+              <option value="5">5</option>
+              <option value="10" selected>10</option>
+              <option value="25">25</option>
+              <option value="50">50</option>
+            </select>
+          </div>
+        </div>
+
+        <input id="queueId" type="hidden" />
+
+        <div class="row2">
+          <div>
+            <label for="maxPages">Interaction max pages (safety)</label>
+            <select id="maxPages">
+              <option value="5">5</option>
+              <option value="10" selected>10</option>
+              <option value="25">25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </div>
+          <div class="hint" style="display:flex; align-items:flex-end;">
+            Interaction query uses cursor pagination (up to max pages).
+          </div>
+        </div>
+
+        <div class="btnRow">
+          <button id="loginBtn" class="btnPrimary">1) Sign in</button>
+          <button id="logoutBtn" class="btnSecondary" disabled>Sign out</button>
+          <button id="loadQueuesBtn" class="btnSecondary" disabled>2) Load queues</button>
+          <button id="clearQueuesBtn" class="btnSecondary" type="button" disabled>Clear queues</button>
+        </div>
+
+        <div class="btnRow">
+          <button id="queryBtn" class="btnPrimary" disabled>3) Query interactions</button>
+          <button id="disconnectBtn" class="btnDanger" disabled>4) Disconnect selected</button>
+        </div>
+
+        <div class="footer">
+          Note: Your OAuth client must allow this page’s origin under <b>Allowed Origins (CORS)</b>, and the redirect URI must match exactly.
+        </div>
+      </div>
+
+      <!-- RIGHT: Results -->
+      <div class="card" id="resultsCard">
+        <div class="overlay" id="resultsOverlay">
+          <div class="spinner" aria-hidden="true"></div>
+          <div>
+            <div class="overlayText" id="resultsOverlayText">Working…</div>
+            <div class="overlaySub" id="resultsOverlaySub">Please wait</div>
+          </div>
+        </div>
+
+        <h2>Interactions</h2>
+
+        <div class="row2">
+          <div>
+            <label for="filterText">Filter conversationId (contains)</label>
+            <input id="filterText" placeholder="Type to filter interactions…" />
+          </div>
+          <div>
+            <label for="stateFilter">State</label>
+            <select id="stateFilter">
+              <option value="all" selected>all</option>
+              <option value="waiting">waiting</option>
+              <option value="interacting">interacting</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="listHead">
+          <div class="left">
+            <label style="margin:0; font-weight:700; display:flex; align-items:center; gap:10px;">
+              <input id="selectAll" type="checkbox" />
+              Select all (filtered)
+            </label>
+            <span class="badge" id="countPill">0 items</span>
+            <span class="badge" id="selectedPill">0 selected</span>
+            <span class="badge" id="visiblePill">0 visible</span>
+          </div>
+          <div class="left">
+            <button id="clearListBtn" class="btnSecondary" type="button" style="width:auto; padding:10px 14px;">Clear list</button>
+          </div>
+        </div>
+
+        <div id="interactionList" class="list">
+          <div class="item">
+            <div class="hint">No interactions yet. Select a queue and click <b>Query interactions</b>.</div>
+          </div>
+        </div>
+
+        <div class="btnRow">
+          <button id="selectWaitingBtn" class="btnSecondary" type="button" disabled>Select waiting only</button>
+          <button id="selectInteractingBtn" class="btnSecondary" type="button" disabled>Select interacting only</button>
+        </div>
+
+        <div class="sectionDivider"></div>
+
+        <h3>Log</h3>
+        <textarea id="log" readonly aria-label="Application log"></textarea>
+        <div class="hint">The log is preserved across redirects during sign-in.</div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // ------------------------------------------------------------
+  // Logging (persist across redirects)
+  // ------------------------------------------------------------
+  const logEl = document.getElementById('log');
+  logEl.value = sessionStorage.getItem('ui_log') || '';
+
+  function log(msg) {
+    const ts = new Date().toISOString();
+    const line = `[${ts}] ${msg}\n`;
+    const prev = sessionStorage.getItem('ui_log') || '';
+    sessionStorage.setItem('ui_log', prev + line);
+    logEl.value = sessionStorage.getItem('ui_log');
+    logEl.scrollTop = logEl.scrollHeight;
+    console.log(msg);
+  }
+
+  // ------------------------------------------------------------
+  // Status pills
+  // ------------------------------------------------------------
+  const statusPill = document.getElementById('statusPill');
+  const statusDot = document.getElementById('statusDot');
+  const savePill = document.getElementById('savePill');
+  const queuePill = document.getElementById('queuePill');
+  const busyPill = document.getElementById('busyPill');
+
+  function setStatus(isLoggedIn) {
+    statusPill.textContent = isLoggedIn ? "Logged in" : "Logged out";
+    statusDot.className = "dot" + (isLoggedIn ? " ok" : "");
+  }
+  function setQueuePillText(queueName, queueId) {
+    queuePill.textContent = queueId ? `Queue: ${queueName || "(unnamed)"} (${queueId})` : "Queue: none";
+  }
+  function setSavedUI(text) { savePill.textContent = text; }
+
+  // ------------------------------------------------------------
+  // Busy overlays
+  // ------------------------------------------------------------
+  const setupOverlay = document.getElementById('setupOverlay');
+  const resultsOverlay = document.getElementById('resultsOverlay');
+  const setupOverlayText = document.getElementById('setupOverlayText');
+  const setupOverlaySub = document.getElementById('setupOverlaySub');
+  const resultsOverlayText = document.getElementById('resultsOverlayText');
+  const resultsOverlaySub = document.getElementById('resultsOverlaySub');
+
+  function setBusy(where, on, title, sub) {
+    const overlay = where === "setup" ? setupOverlay : resultsOverlay;
+    const t = where === "setup" ? setupOverlayText : resultsOverlayText;
+    const s = where === "setup" ? setupOverlaySub : resultsOverlaySub;
+
+    if (title) t.textContent = title;
+    if (sub) s.textContent = sub;
+
+    overlay.classList.toggle("show", !!on);
+
+    if (on) busyPill.textContent = title || "Working…";
+    else busyPill.textContent = "Idle";
+  }
+
+  // ------------------------------------------------------------
+  // Helpers
+  // ------------------------------------------------------------
+  function qs(name) { return new URL(window.location.href).searchParams.get(name); }
+  function baseUrls(region) { return { login: `https://login.${region}`, api: `https://api.${region}` }; }
+
+  // ------------------------------------------------------------
+  // Persist form values across redirects
+  // ------------------------------------------------------------
+  const keys = {
+    region: 'ui_region',
+    clientId: 'ui_clientId',
+    redirectUri: 'ui_redirectUri',
+    queueId: 'ui_queueId',
+    queueName: 'ui_queueName',
+    mediaType: 'ui_mediaType',
+    dryRun: 'ui_dryRun',
+    maxPages: 'ui_maxPages',
+    queueFilter: 'ui_queueFilter',
+    queuePageSize: 'ui_queuePageSize',
+    queueMaxPages: 'ui_queueMaxPages',
+  };
+
+  let selectedQueueName = "";
+
+  function saveFormToSession() {
+    sessionStorage.setItem(keys.region, document.getElementById('region').value.trim());
+    sessionStorage.setItem(keys.clientId, document.getElementById('clientId').value.trim());
+    sessionStorage.setItem(keys.redirectUri, document.getElementById('redirectUri').value.trim());
+    sessionStorage.setItem(keys.queueId, document.getElementById('queueId').value.trim());
+    sessionStorage.setItem(keys.queueName, (selectedQueueName || "").trim());
+    sessionStorage.setItem(keys.mediaType, document.getElementById('mediaType').value);
+    sessionStorage.setItem(keys.dryRun, document.getElementById('dryRun').value);
+    sessionStorage.setItem(keys.maxPages, document.getElementById('maxPages').value);
+
+    sessionStorage.setItem(keys.queueFilter, document.getElementById('queueFilter').value);
+    sessionStorage.setItem(keys.queuePageSize, document.getElementById('queuePageSize').value);
+    sessionStorage.setItem(keys.queueMaxPages, document.getElementById('queueMaxPages').value);
+
+    setSavedUI("Saved");
+  }
+
+  function restoreFormFromSession() {
+    const get = (k) => sessionStorage.getItem(k);
+
+    const region = get(keys.region);
+    const clientId = get(keys.clientId);
+    const redirectUri = get(keys.redirectUri);
+    const queueId = get(keys.queueId);
+    const queueName = get(keys.queueName);
+    const mediaType = get(keys.mediaType);
+    const dryRun = get(keys.dryRun);
+    const maxPages = get(keys.maxPages);
+
+    const queueFilter = get(keys.queueFilter);
+    const queuePageSize = get(keys.queuePageSize);
+    const queueMaxPages = get(keys.queueMaxPages);
+
+    if (region !== null) document.getElementById('region').value = region;
+    if (clientId !== null) document.getElementById('clientId').value = clientId;
+    if (redirectUri !== null) document.getElementById('redirectUri').value = redirectUri;
+    if (queueId !== null) document.getElementById('queueId').value = queueId;
+    if (queueName !== null) selectedQueueName = queueName;
+    if (mediaType !== null) document.getElementById('mediaType').value = mediaType;
+    if (dryRun !== null) document.getElementById('dryRun').value = dryRun;
+    if (maxPages !== null) document.getElementById('maxPages').value = maxPages;
+
+    if (queueFilter !== null) document.getElementById('queueFilter').value = queueFilter;
+    if (queuePageSize !== null) document.getElementById('queuePageSize').value = queuePageSize;
+    if (queueMaxPages !== null) document.getElementById('queueMaxPages').value = queueMaxPages;
+
+    const redirectEl = document.getElementById('redirectUri');
+    if (!redirectEl.value.trim()) redirectEl.value = window.location.origin + window.location.pathname;
+
+    const regionEl = document.getElementById('region');
+    if (!regionEl.value.trim()) regionEl.value = "mec1.pure.cloud";
+
+    setSavedUI(region || clientId || queueId ? "Restored" : "Not saved");
+    setQueuePillText(selectedQueueName, document.getElementById('queueId').value.trim());
+  }
+
+  function bindAutoSave() {
+    const ids = ['region','clientId','redirectUri','mediaType','dryRun','maxPages','queueFilter','queuePageSize','queueMaxPages'];
+    for (const id of ids) {
+      document.getElementById(id).addEventListener('input', saveFormToSession);
+      document.getElementById(id).addEventListener('change', saveFormToSession);
+    }
+  }
+
+  // ------------------------------------------------------------
+  // PKCE helpers
+  // ------------------------------------------------------------
+  function randomString(length = 64) {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+    let out = '';
+    const arr = new Uint32Array(length);
+    crypto.getRandomValues(arr);
+    for (let i = 0; i < length; i++) out += chars[arr[i] % chars.length];
+    return out;
+  }
+  async function sha256(plain) { return crypto.subtle.digest('SHA-256', new TextEncoder().encode(plain)); }
+  function base64UrlEncode(buffer) {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  async function pkceChallengeFromVerifier(verifier) {
+    const hashed = await sha256(verifier);
+    return base64UrlEncode(hashed);
+  }
+
+  // ------------------------------------------------------------
+  // State
+  // ------------------------------------------------------------
+  let accessToken = null;
+
+  // Queues
+  let queues = [];
+  let filteredQueues = [];
+  const queueSelectEl = document.getElementById('queueSelect');
+  const queueFilterEl = document.getElementById('queueFilter');
+  const loadQueuesBtn = document.getElementById('loadQueuesBtn');
+  const clearQueuesBtn = document.getElementById('clearQueuesBtn');
+
+  // Interactions
+  let interactions = [];
+  let visibleIndexes = [];
+  const listEl = document.getElementById('interactionList');
+  const selectAllEl = document.getElementById('selectAll');
+  const countPill = document.getElementById('countPill');
+  const selectedPill = document.getElementById('selectedPill');
+  const visiblePill = document.getElementById('visiblePill');
+  const disconnectBtn = document.getElementById('disconnectBtn');
+  const selectWaitingBtn = document.getElementById('selectWaitingBtn');
+  const selectInteractingBtn = document.getElementById('selectInteractingBtn');
+  const filterTextEl = document.getElementById('filterText');
+  const stateFilterEl = document.getElementById('stateFilter');
+
+  // ------------------------------------------------------------
+  // UI enablement
+  // ------------------------------------------------------------
+  function syncQueryButtonEnabled() {
+    const hasQueue = !!document.getElementById('queueId').value.trim();
+    document.getElementById('queryBtn').disabled = !(accessToken && hasQueue);
+  }
+
+  function computeVisibleIndexes() {
+    const text = (filterTextEl.value || "").trim().toLowerCase();
+    const sf = stateFilterEl.value;
+
+    visibleIndexes = [];
+    for (let i = 0; i < interactions.length; i++) {
+      const it = interactions[i];
+      if (sf !== "all" && it.state !== sf) continue;
+      if (text && !it.conversationId.toLowerCase().includes(text)) continue;
+      visibleIndexes.push(i);
+    }
+  }
+
+  function updateCounts() {
+    const total = interactions.length;
+    const selected = interactions.filter(x => x.selected).length;
+
+    computeVisibleIndexes();
+    const visible = visibleIndexes.length;
+
+    countPill.textContent = `${total} item${total === 1 ? '' : 's'}`;
+    selectedPill.textContent = `${selected} selected`;
+    visiblePill.textContent = `${visible} visible`;
+
+    const visibleSelected = visibleIndexes.filter(i => interactions[i].selected).length;
+
+    if (visible === 0) {
+      selectAllEl.checked = false;
+      selectAllEl.indeterminate = false;
+    } else if (visibleSelected === 0) {
+      selectAllEl.checked = false;
+      selectAllEl.indeterminate = false;
+    } else if (visibleSelected === visible) {
+      selectAllEl.checked = true;
+      selectAllEl.indeterminate = false;
+    } else {
+      selectAllEl.checked = false;
+      selectAllEl.indeterminate = true;
+    }
+
+    disconnectBtn.disabled = !(accessToken && selected > 0);
+    selectWaitingBtn.disabled = total === 0;
+    selectInteractingBtn.disabled = total === 0;
+  }
+
+  function disableWhileBusy(isBusy) {
+    const hasQueue = !!document.getElementById('queueId').value.trim();
+    document.getElementById('loginBtn').disabled = isBusy;
+    document.getElementById('logoutBtn').disabled = isBusy || !accessToken;
+    loadQueuesBtn.disabled = isBusy || !accessToken;
+    clearQueuesBtn.disabled = isBusy || !(queues.length > 0);
+    queueSelectEl.disabled = isBusy || !(accessToken && queues.length > 0);
+    document.getElementById('queryBtn').disabled = isBusy || !(accessToken && hasQueue);
+    disconnectBtn.disabled = isBusy || !(accessToken && interactions.some(x => x.selected));
+  }
+
+  // ------------------------------------------------------------
+  // Queue rendering
+  // ------------------------------------------------------------
+  function renderQueueSelect() {
+    const currentQueueId = document.getElementById('queueId').value.trim();
+    const filterText = (queueFilterEl.value || "").trim().toLowerCase();
+
+    filteredQueues = !filterText
+      ? queues.slice()
+      : queues.filter(q => (q.name || "").toLowerCase().includes(filterText));
+
+    filteredQueues.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+
+    const options = [];
+    options.push(`<option value="">(select a queue)</option>`);
+    for (const q of filteredQueues) {
+      const name = q.name || "(unnamed)";
+      const selectedAttr = (q.id === currentQueueId) ? "selected" : "";
+      options.push(`<option value="${q.id}" ${selectedAttr}>${name}</option>`);
+    }
+
+    queueSelectEl.innerHTML = options.join("");
+    queueSelectEl.disabled = !(accessToken && queues.length > 0);
+
+    syncQueryButtonEnabled();
+    saveFormToSession();
+  }
+
+  function setSelectedQueue(queueId, queueName) {
+    document.getElementById('queueId').value = queueId || "";
+    selectedQueueName = queueName || "";
+    setQueuePillText(selectedQueueName, queueId || "");
+    syncQueryButtonEnabled();
+    saveFormToSession();
+  }
+
+  queueFilterEl.addEventListener('input', () => renderQueueSelect());
+
+  queueSelectEl.addEventListener('change', () => {
+    const id = queueSelectEl.value;
+    if (!id) return setSelectedQueue("", "");
+    const found = queues.find(q => q.id === id);
+    setSelectedQueue(id, found?.name || "");
+  });
+
+  function clearQueues() {
+    queues = [];
+    filteredQueues = [];
+    queueSelectEl.innerHTML = `<option value="">(load queues first)</option>`;
+    queueSelectEl.disabled = true;
+    clearQueuesBtn.disabled = true;
+    setSelectedQueue("", "");
+    log("Queues cleared.");
+  }
+  clearQueuesBtn.addEventListener('click', clearQueues);
+
+  async function fetchQueuesPaged(api, headers, pageSize, maxPages) {
+    const all = [];
+    for (let page = 1; page <= maxPages; page++) {
+      const url = new URL(`${api}/api/v2/routing/queues`);
+      url.searchParams.set("pageSize", String(pageSize));
+      url.searchParams.set("pageNumber", String(page));
+
+      const resp = await fetch(url.toString(), { method: "GET", headers });
+      const text = await resp.text();
+      if (!resp.ok) throw new Error(`Queues failed (page ${page}): ${resp.status} ${resp.statusText} - ${text}`);
+
+      const payload = JSON.parse(text);
+      const entities = payload?.entities || [];
+      for (const q of entities) if (q?.id) all.push({ id: q.id, name: q.name || "" });
+
+      log(`Queues page ${page}: +${entities.length} (total ${all.length})`);
+
+      if (payload?.pageCount && page >= payload.pageCount) break;
+      if (entities.length < pageSize) break;
+    }
+    return all;
+  }
+
+  loadQueuesBtn.addEventListener('click', async () => {
+    if (!accessToken) return alert("Sign in first.");
+
+    const region = document.getElementById('region').value.trim();
+    if (!region) return alert("Please enter region.");
+
+    const { api } = baseUrls(region);
+    const headers = { 'Authorization': `Bearer ${accessToken}` };
+
+    const pageSize = Number(document.getElementById('queuePageSize').value || "50");
+    const maxPages = Number(document.getElementById('queueMaxPages').value || "10");
+
+    disableWhileBusy(true);
+    setBusy("setup", true, "Loading queues…", `Fetching up to ${maxPages} page(s)`);
+    queueSelectEl.innerHTML = `<option value="">(loading…)</option>`;
+
+    try {
+      log(`Loading queues… pageSize=${pageSize}, maxPages=${maxPages}`);
+      const list = await fetchQueuesPaged(api, headers, pageSize, maxPages);
+
+      const seen = new Set();
+      queues = list.filter(q => (seen.has(q.id) ? false : (seen.add(q.id), true)));
+
+      log(`Loaded ${queues.length} queue(s).`);
+      clearQueuesBtn.disabled = queues.length === 0;
+
+      renderQueueSelect();
+
+      const existingQueueId = document.getElementById('queueId').value.trim();
+      if (existingQueueId) {
+        const found = queues.find(q => q.id === existingQueueId);
+        if (found) setSelectedQueue(existingQueueId, found.name || "");
+        else setQueuePillText(selectedQueueName, existingQueueId);
+      }
+    } catch (e) {
+      log(String(e));
+      alert("Failed to load queues. Check log.");
+      clearQueues();
+    } finally {
+      setBusy("setup", false);
+      disableWhileBusy(false);
+      clearQueuesBtn.disabled = !(queues.length > 0);
+      renderQueueSelect();
+      updateCounts();
+    }
+  });
+
+  // ------------------------------------------------------------
+  // Interactions rendering
+  // ------------------------------------------------------------
+  function renderList() {
+    computeVisibleIndexes();
+
+    if (interactions.length === 0) {
+      listEl.innerHTML = `
+        <div class="item">
+          <div class="hint">No interactions yet. Select a queue and click <b>Query interactions</b>.</div>
+        </div>`;
+      updateCounts();
+      return;
+    }
+
+    if (visibleIndexes.length === 0) {
+      listEl.innerHTML = `<div class="item"><div class="hint">No items match the current filter.</div></div>`;
+      updateCounts();
+      return;
+    }
+
+    listEl.innerHTML = visibleIndexes.map((idx) => {
+      const it = interactions[idx];
+      const tagClass = it.state === "interacting" ? "interacting" : "waiting";
+      return `
+        <div class="item">
+          <input type="checkbox" data-idx="${idx}" ${it.selected ? "checked" : ""} />
+          <div style="width:100%;">
+            <div class="mono">${it.conversationId}</div>
+            <div class="meta">
+              <span class="tag ${tagClass}">${it.state}</span>
+              &nbsp;•&nbsp; mediaType: <b>${it.mediaType}</b>
+              ${it.direction ? `&nbsp;•&nbsp; direction: <b>${it.direction}</b>` : ""}
+              ${it.participantId ? `&nbsp;•&nbsp; participantId: <span class="mono">${it.participantId}</span>` : ""}
+              ${it.sessionId ? `&nbsp;•&nbsp; sessionId: <span class="mono">${it.sessionId}</span>` : ""}
+            </div>
+          </div>
+        </div>`;
+    }).join("");
+
+    listEl.querySelectorAll('input[type="checkbox"][data-idx]').forEach(cb => {
+      cb.addEventListener('change', (e) => {
+        const i = Number(e.target.getAttribute('data-idx'));
+        interactions[i].selected = e.target.checked;
+        updateCounts();
+      });
+    });
+
+    updateCounts();
+  }
+
+  document.getElementById('clearListBtn').addEventListener('click', () => {
+    interactions = [];
+    visibleIndexes = [];
+    renderList();
+    log("Interactions cleared.");
+  });
+
+  selectAllEl.addEventListener('change', () => {
+    computeVisibleIndexes();
+    const checked = selectAllEl.checked;
+    for (const idx of visibleIndexes) interactions[idx].selected = checked;
+    renderList();
+  });
+
+  filterTextEl.addEventListener('input', () => renderList());
+  stateFilterEl.addEventListener('change', () => renderList());
+
+  selectWaitingBtn.addEventListener('click', () => {
+    interactions.forEach(it => it.selected = (it.state === "waiting"));
+    renderList();
+  });
+
+  selectInteractingBtn.addEventListener('click', () => {
+    interactions.forEach(it => it.selected = (it.state === "interacting"));
+    renderList();
+  });
+
+  // ------------------------------------------------------------
+  // Disconnect endpoint mapping
+  // ------------------------------------------------------------
+  function disconnectPathForMediaType(mediaType, conversationId) {
+    const id = encodeURIComponent(conversationId);
+    switch (mediaType) {
+      case "email":   return `/api/v2/conversations/emails/${id}`;
+      case "voice":   return `/api/v2/conversations/calls/${id}`;
+      case "chat":    return `/api/v2/conversations/chats/${id}`;
+      case "message": return `/api/v2/conversations/messages/${id}`;
+      default: throw new Error(`Unsupported mediaType: ${mediaType}`);
+    }
+  }
+
+  // ------------------------------------------------------------
+  // OAuth (PKCE) Sign-in
+  // ------------------------------------------------------------
+  document.getElementById('loginBtn').addEventListener('click', async () => {
+    const region = document.getElementById('region').value.trim();
+    const clientId = document.getElementById('clientId').value.trim();
+    const redirectUri = document.getElementById('redirectUri').value.trim();
+
+    // include routing so queues can be listed
+    const scope = "analytics conversations routing";
+
+    if (!region || !clientId || !redirectUri) {
+      alert("Please fill: region, clientId, redirectUri");
+      return;
+    }
+
+    saveFormToSession();
+
+    const { login } = baseUrls(region);
+
+    const codeVerifier = randomString(64);
+    const codeChallenge = await pkceChallengeFromVerifier(codeVerifier);
+    const state = randomString(24);
+
+    sessionStorage.setItem('pkce_code_verifier', codeVerifier);
+    sessionStorage.setItem('oauth_state', state);
+    sessionStorage.setItem('oauth_region', region);
+    sessionStorage.setItem('oauth_clientId', clientId);
+    sessionStorage.setItem('oauth_redirectUri', redirectUri);
+
+    const authorizeUrl = new URL(`${login}/oauth/authorize`);
+    authorizeUrl.searchParams.set('response_type', 'code');
+    authorizeUrl.searchParams.set('client_id', clientId);
+    authorizeUrl.searchParams.set('redirect_uri', redirectUri);
+    authorizeUrl.searchParams.set('code_challenge', codeChallenge);
+    authorizeUrl.searchParams.set('code_challenge_method', 'S256');
+    authorizeUrl.searchParams.set('state', state);
+    authorizeUrl.searchParams.set('scope', scope);
+
+    log("Redirecting to Genesys authorization endpoint…");
+    setBusy("setup", true, "Signing in…", "Redirecting to Genesys Cloud");
+    // page navigates away next line
+    window.location.href = authorizeUrl.toString();
+  });
+
+  document.getElementById('logoutBtn').addEventListener('click', () => {
+    accessToken = null;
+    sessionStorage.removeItem('access_token');
+    sessionStorage.removeItem('pkce_code_verifier');
+    sessionStorage.removeItem('oauth_state');
+
+    setStatus(false);
+    log("Signed out (token cleared).");
+
+    document.getElementById('logoutBtn').disabled = true;
+    loadQueuesBtn.disabled = true;
+    queueSelectEl.disabled = true;
+    document.getElementById('queryBtn').disabled = true;
+    disconnectBtn.disabled = true;
+
+    updateCounts();
+  });
+
+  async function handleOAuthCallbackIfPresent() {
+    const code = qs('code');
+    const returnedState = qs('state');
+    const error = qs('error');
+    const errorDesc = qs('error_description');
+
+    if (error) {
+      log(`OAuth error: ${error}${errorDesc ? " - " + errorDesc : ""}`);
+      return;
+    }
+    if (!code) return;
+
+    const expectedState = sessionStorage.getItem('oauth_state');
+    if (!expectedState || returnedState !== expectedState) {
+      log("State mismatch — aborting (stale session).");
+      return;
+    }
+
+    const region = sessionStorage.getItem('oauth_region');
+    const clientId = sessionStorage.getItem('oauth_clientId');
+    const redirectUri = sessionStorage.getItem('oauth_redirectUri');
+    const codeVerifier = sessionStorage.getItem('pkce_code_verifier');
+    if (!region || !clientId || !redirectUri || !codeVerifier) {
+      log("Missing PKCE session values. Aborting.");
+      return;
+    }
+
+    const { login } = baseUrls(region);
+
+    const form = new URLSearchParams();
+    form.set('grant_type', 'authorization_code');
+    form.set('client_id', clientId);
+    form.set('code', code);
+    form.set('redirect_uri', redirectUri);
+    form.set('code_verifier', codeVerifier);
+
+    log("Exchanging authorization code for token…");
+    setBusy("setup", true, "Signing in…", "Exchanging authorization code");
+
+    let resp, text;
+    try {
+      resp = await fetch(`${login}/oauth/token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: form.toString(),
+      });
+      text = await resp.text();
+    } catch (e) {
+      setBusy("setup", false);
+      log(`Token exchange network/CORS error: ${e?.message || e}`);
+      alert("Token exchange blocked (likely CORS). Check Allowed Origins + Redirect URI.");
+      return;
+    }
+
+    if (!resp.ok) {
+      setBusy("setup", false);
+      log(`Token exchange failed: ${resp.status} ${resp.statusText} - ${text}`);
+      alert("Token exchange failed. Check the log for details.");
+      return;
+    }
+
+    const tokenJson = JSON.parse(text);
+    accessToken = tokenJson.access_token;
+    sessionStorage.setItem('access_token', accessToken);
+
+    setStatus(true);
+    setBusy("setup", false);
+    log("✅ Logged in. Access token acquired.");
+
+    const cleanUrl = new URL(window.location.href);
+    cleanUrl.searchParams.delete('code');
+    cleanUrl.searchParams.delete('state');
+    window.history.replaceState({}, document.title, cleanUrl.toString());
+  }
+
+  // ------------------------------------------------------------
+  // Query interactions (waiting + interacting) — no "waiting+interacting"
+  // If a conversation appears in both, we display "interacting".
+  // ------------------------------------------------------------
+  async function fetchObservationsForMetricPaged(api, headers, queueId, mediaType, metricName, maxPages, onPage) {
+    const all = [];
+    let cursor = null;
+
+    for (let page = 1; page <= maxPages; page++) {
+      const body = {
+        filter: {
+          type: "and",
+          predicates: [
+            { dimension: "queueId", value: queueId },
+            { dimension: "mediaType", value: mediaType }
+          ]
+        },
+        metrics: [metricName],
+        detailMetrics: [metricName],
+        ...(cursor ? { cursor } : {})
+      };
+
+      const resp = await fetch(`${api}/api/v2/analytics/queues/observations/query`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+      });
+
+      const text = await resp.text();
+      if (!resp.ok) throw new Error(`Observations(${metricName}) failed (page ${page}): ${resp.status} ${resp.statusText} - ${text}`);
+
+      const payload = JSON.parse(text);
+      const data0 = payload?.results?.[0]?.data?.[0] || {};
+      const obs = data0.observations || [];
+      all.push(...obs);
+
+      const next = data0.cursor || payload.cursor || payload.nextCursor || payload.next_cursor || null;
+
+      if (typeof onPage === "function") onPage({ metricName, page, got: obs.length, totalSoFar: all.length, hasNext: !!next });
+
+      if (!next) break;
+      if (next === cursor) break; // safety
+      cursor = next;
+    }
+    return all;
+  }
+
+  document.getElementById('queryBtn').addEventListener('click', async () => {
+    if (!accessToken) return alert("Sign in first.");
+
+    saveFormToSession();
+
+    const region = document.getElementById('region').value.trim();
+    const queueId = document.getElementById('queueId').value.trim();
+    const mediaType = document.getElementById('mediaType').value.trim();
+    const maxPages = Number(document.getElementById('maxPages').value || "10");
+
+    if (!region || !queueId) return alert("Select a queue first (Load queues → choose a queue).");
+
+    const { api } = baseUrls(region);
+    const headers = { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' };
+
+    interactions = [];
+    renderList();
+    disableWhileBusy(true);
+    setBusy("results", true, "Querying interactions…", `Up to ${maxPages} page(s) per metric`);
+
+    try {
+      log(`Query start: queueId=${queueId}, mediaType=${mediaType}, maxPages=${maxPages}`);
+
+      const waiting = await fetchObservationsForMetricPaged(api, headers, queueId, mediaType, "oWaiting", maxPages,
+        info => {
+          log(`oWaiting page ${info.page}: +${info.got} (total ${info.totalSoFar})${info.hasNext ? " (next)" : ""}`);
+          resultsOverlaySub.textContent = `Waiting page ${info.page}…`;
+        }
+      );
+
+      const interacting = await fetchObservationsForMetricPaged(api, headers, queueId, mediaType, "oInteracting", maxPages,
+        info => {
+          log(`oInteracting page ${info.page}: +${info.got} (total ${info.totalSoFar})${info.hasNext ? " (next)" : ""}`);
+          resultsOverlaySub.textContent = `Interacting page ${info.page}…`;
+        }
+      );
+
+      const map = new Map(); // conversationId -> item
+
+      function putObs(list, state) {
+        for (const o of list) {
+          const id = (o.conversationId || "").trim();
+          if (!id) continue;
+
+          const existing = map.get(id);
+          const item = existing || {
+            conversationId: id,
+            mediaType,
+            state,
+            direction: o.direction || "",
+            participantId: o.participantId || "",
+            sessionId: o.sessionId || "",
+            selected: true
+          };
+
+          // if already waiting and now interacting -> interacting wins
+          item.state = state;
+
+          if (!item.direction && o.direction) item.direction = o.direction;
+          if (!item.participantId && o.participantId) item.participantId = o.participantId;
+          if (!item.sessionId && o.sessionId) item.sessionId = o.sessionId;
+
+          map.set(id, item);
+        }
+      }
+
+      putObs(waiting, "waiting");
+      putObs(interacting, "interacting");
+
+      interactions = Array.from(map.values());
+
+      const order = { waiting: 0, interacting: 1 };
+      interactions.sort((a, b) => {
+        const da = order[a.state] ?? 9;
+        const db = order[b.state] ?? 9;
+        if (da !== db) return da - db;
+        return a.conversationId.localeCompare(b.conversationId);
+      });
+
+      renderList();
+      log(`Query done. Unique conversations: ${interactions.length}`);
+    } catch (e) {
+      log(String(e));
+      alert("Query failed. Check log.");
+    } finally {
+      setBusy("results", false);
+      disableWhileBusy(false);
+      updateCounts();
+    }
+  });
+
+  // ------------------------------------------------------------
+  // Disconnect selected
+  // ------------------------------------------------------------
+  document.getElementById('disconnectBtn').addEventListener('click', async () => {
+    if (!accessToken) return alert("Sign in first.");
+
+    const dryRun = document.getElementById('dryRun').value === 'true';
+    const region = document.getElementById('region').value.trim();
+    const mediaType = document.getElementById('mediaType').value.trim();
+
+    const selected = interactions.filter(x => x.selected);
+    if (selected.length === 0) return alert("Nothing selected.");
+
+    const confirmMsg = dryRun
+      ? `Dry run is ON. This will NOT disconnect anything.\n\nProceed to simulate disconnect for ${selected.length} conversation(s)?`
+      : `This will disconnect ${selected.length} conversation(s). Proceed?`;
+    if (!confirm(confirmMsg)) return;
+
+    const { api } = baseUrls(region);
+    const headers = { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' };
+
+    disableWhileBusy(true);
+    setBusy("results", true, "Disconnecting…", dryRun ? "Dry run mode (no changes)" : "Applying changes");
+    try {
+      let processed = 0;
+
+      for (let i = 0; i < selected.length; i++) {
+        const it = selected[i];
+        const conversationId = it.conversationId;
+        if (!conversationId) continue;
+
+        resultsOverlaySub.textContent = `Processing ${i + 1} / ${selected.length}`;
+
+        if (dryRun) {
+          log(`[DRY_RUN] Would disconnect ${conversationId}`);
+          processed++;
+          continue;
+        }
+
+        const path = disconnectPathForMediaType(mediaType, conversationId);
+        log(`Disconnecting ${conversationId} via ${path}…`);
+
+        let resp, text;
+        try {
+          resp = await fetch(`${api}${path}`, {
+            method: 'PATCH',
+            headers,
+            body: JSON.stringify({ state: "disconnected" })
+          });
+          text = await resp.text();
+        } catch (e) {
+          log(`Disconnect network/CORS error: ${e?.message || e}`);
+          alert("Disconnect call blocked. Check CORS + permissions.");
+          return;
+        }
+
+        if (!resp.ok) {
+          log(`Disconnect failed for ${conversationId}: ${resp.status} ${resp.statusText} - ${text}`);
+          alert(`Disconnect failed for one item. Check log (conversationId=${conversationId}).`);
+          return;
+        }
+
+        processed++;
+        log(`✅ Disconnected ${conversationId}`);
+      }
+
+      log(`Done. Processed ${processed} selected conversation(s).`);
+    } finally {
+      setBusy("results", false);
+      disableWhileBusy(false);
+      updateCounts();
+    }
+  });
+
+  // ------------------------------------------------------------
+  // Selectors
+  // ------------------------------------------------------------
+  selectAllEl.addEventListener('change', () => {
+    computeVisibleIndexes();
+    const checked = selectAllEl.checked;
+    for (const idx of visibleIndexes) interactions[idx].selected = checked;
+    renderList();
+  });
+  filterTextEl.addEventListener('input', () => renderList());
+  stateFilterEl.addEventListener('change', () => renderList());
+  selectWaitingBtn.addEventListener('click', () => {
+    interactions.forEach(it => it.selected = (it.state === "waiting"));
+    renderList();
+  });
+  selectInteractingBtn.addEventListener('click', () => {
+    interactions.forEach(it => it.selected = (it.state === "interacting"));
+    renderList();
+  });
+
+  // ------------------------------------------------------------
+  // Init
+  // ------------------------------------------------------------
+  restoreFormFromSession();
+  bindAutoSave();
+
+  accessToken = sessionStorage.getItem('access_token');
+  setStatus(!!accessToken);
+
+  document.getElementById('logoutBtn').disabled = !accessToken;
+  loadQueuesBtn.disabled = !accessToken;
+
+  setQueuePillText(selectedQueueName, document.getElementById('queueId').value.trim());
+
+  renderList();
+  renderQueueSelect();
+  syncQueryButtonEnabled();
+  updateCounts();
+
+  // Handle OAuth callback on load
+  handleOAuthCallbackIfPresent().then(() => {
+    accessToken = sessionStorage.getItem('access_token');
+    setStatus(!!accessToken);
+    document.getElementById('logoutBtn').disabled = !accessToken;
+    loadQueuesBtn.disabled = !accessToken;
+    renderQueueSelect();
+    syncQueryButtonEnabled();
+    updateCounts();
+  });
+</script>
+</body>
+</html>
