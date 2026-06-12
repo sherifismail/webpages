@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Michael Kors</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="promo-bar">FREE STANDARD SHIPPING ON ORDERS OVER AED 500 &nbsp;|&nbsp; SIGN UP FOR 10% OFF YOUR FIRST ORDER</div>
+
+  <header class="header">
+    <div class="header-top">
+      <button class="icon-btn menu-btn" aria-label="Menu">☰</button>
+      <div class="logo">Michael Kors</div>
+      <div class="header-icons">
+        <button class="icon-btn" aria-label="Search">🔍</button>
+        <button class="icon-btn" aria-label="Account">👤</button>
+        <button class="icon-btn" aria-label="Bag">🛍️</button>
+      </div>
+    </div>
+    <nav class="nav">
+      <a href="#">New Arrivals</a>
+      <a href="#">Women</a>
+      <a href="#">Men</a>
+      <a href="#">Handbags</a>
+      <a href="#">Shoes</a>
+      <a href="#">Accessories</a>
+      <a href="#">Jewelry &amp; Watches</a>
+      <a href="#" class="sale-link">Sale</a>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <div class="hero-content">
+      <h1>THE FALL COLLECTION</h1>
+      <p>Discover new season essentials</p>
+      <button class="cta-btn">Shop Now</button>
+    </div>
+  </section>
+
+  <section class="category-grid">
+    <div class="category-tile">
+      <img class="tile-img" src="https://www.michaelkors.ae/dw/image/v2/BFZH_PRD/on/demandware.static/-/Sites-michaelkors-master-catalog/default/dw90be3e4a/images/32T5GQNC0B_149_1.jpg?sw=540&sh=724" alt="Handbags" />
+      <h3>Handbags</h3>
+    </div>
+    <div class="category-tile">
+      <img class="tile-img" src="https://www.michaelkors.ae/dw/image/v2/BFZH_PRD/on/demandware.static/-/Sites-michaelkors-master-catalog/default/dw7e58138d/images/MK9250_040_4.jpg?sw=540&sh=724" alt="Watches" />
+      <h3>Watches</h3>
+    </div>
+    <div class="category-tile">
+      <img class="tile-img" src="https://www.michaelkors.ae/dw/image/v2/BFZH_PRD/on/demandware.static/-/Sites-michaelkors-master-catalog/default/dw5395fbf1/images/49S5CRFP1L_001_1.jpg?sw=540&sh=724" alt="Shoes" />
+      <h3>Shoes</h3>
+    </div>
+  </section>
+
+  <section class="collection">
+    <h2 class="section-title">New Arrivals</h2>
+    <div class="product-grid">
+      <div class="card">
+        <img class="card-img" src="https://www.michaelkors.ae/dw/image/v2/BFZH_PRD/on/demandware.static/-/Sites-michaelkors-master-catalog/default/dw90be3e4a/images/32T5GQNC0B_149_1.jpg?sw=540&sh=724" alt="Signature Tote" />
+        <h3>Signature Tote</h3>
+        <p>AED 1,495.00</p>
+      </div>
+      <div class="card">
+        <img class="card-img" src="https://www.michaelkors.ae/dw/image/v2/BFZH_PRD/on/demandware.static/-/Sites-michaelkors-master-catalog/default/dw7e58138d/images/MK9250_040_4.jpg?sw=540&sh=724" alt="Runway Chronograph" />
+        <h3>Runway Chronograph</h3>
+        <p>AED 1,095.00</p>
+      </div>
+      <div class="card">
+        <img class="card-img" src="https://www.michaelkors.ae/dw/image/v2/BFZH_PRD/on/demandware.static/-/Sites-michaelkors-master-catalog/default/dw5395fbf1/images/49S5CRFP1L_001_1.jpg?sw=540&sh=724" alt="Leather Loafer" />
+        <h3>Leather Loafer</h3>
+        <p>AED 650.00</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="signup">
+    <h2 class="section-title">Need Help?</h2>
+    <p class="signup-text">Enter your mobile number and start a chat with our customer care team.</p>
+    <form class="signup-form" id="phoneForm">
+      <div class="phone-input-group">
+        <span class="country-code">🇦🇪 +971</span>
+        <input
+          type="tel"
+          id="phoneNumber"
+          class="phone-number"
+          placeholder="Mobile number"
+          pattern="[0-9]{6,15}"
+          inputmode="numeric"
+          required
+        />
+        <button type="submit" class="signup-submit">Start Chat</button>
+      </div>
+      <span class="error-msg" id="phoneError"></span>
+      <span class="success-msg" id="phoneSuccess"></span>
+    </form>
+  </section>
+
+  <footer class="footer">
+    <p>&copy; 2026 Michael Kors. All rights reserved.</p>
+  </footer>
+
+  <script type="text/javascript" charset="utf-8">
+    (function (g, e, n, es, ys) {
+      g['_genesysJs'] = e;
+      g[e] = g[e] || function () {
+        (g[e].q = g[e].q || []).push(arguments)
+      };
+      g[e].t = 1 * new Date();
+      g[e].c = es;
+      ys = document.createElement('script'); ys.async = 1; ys.src = n; ys.charset = 'utf-8'; document.head.appendChild(ys);
+    })(window, 'Genesys', 'https://apps.mypurecloud.ie/genesys-bootstrap/genesys.min.js', {
+      environment: 'euw1',
+      deploymentId: 'c482da8d-54f8-4ce5-a928-1f04d409cf37'
+    });
+  </script>
+  <script src="script.js"></script>
+</body>
+</html>
