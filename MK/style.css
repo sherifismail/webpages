@@ -1,0 +1,282 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Montserrat', sans-serif;
+  color: #1a1a1a;
+  background: #fdfdfd;
+}
+
+/* Promo bar */
+.promo-bar {
+  background: #000;
+  color: #fff;
+  text-align: center;
+  font-size: 11px;
+  letter-spacing: 1px;
+  padding: 8px 16px;
+}
+
+/* Header */
+.header {
+  background: #fff;
+  border-bottom: 1px solid #eaeaea;
+}
+
+.header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 32px;
+}
+
+.icon-btn {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: #1a1a1a;
+}
+
+.header-icons {
+  display: flex;
+  gap: 18px;
+}
+
+.logo {
+  font-family: 'Playfair Display', serif;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-align: center;
+}
+
+.nav {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 28px;
+  padding: 12px 32px 16px;
+  border-top: 1px solid #f2f2f2;
+}
+
+.nav a {
+  color: #1a1a1a;
+  text-decoration: none;
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  transition: color 0.2s;
+}
+
+.nav a:hover {
+  color: #888;
+}
+
+.sale-link {
+  color: #c0392b;
+  font-weight: 600;
+}
+
+/* Hero */
+.hero {
+  height: 70vh;
+  background: linear-gradient(135deg, #1a1a1a 0%, #3a3a3a 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #fff;
+}
+
+.hero-content h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: 48px;
+  letter-spacing: 6px;
+  margin-bottom: 16px;
+}
+
+.hero-content p {
+  font-size: 16px;
+  font-weight: 300;
+  margin-bottom: 28px;
+  letter-spacing: 1px;
+}
+
+.cta-btn {
+  background: #fff;
+  color: #000;
+  border: none;
+  padding: 14px 40px;
+  font-size: 13px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.cta-btn:hover {
+  background: #000;
+  color: #fff;
+  outline: 1px solid #fff;
+}
+
+/* Category grid */
+.category-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 24px;
+  padding: 48px 32px;
+}
+
+.category-tile {
+  width: 300px;
+  text-align: center;
+}
+
+.tile-img {
+  width: 100%;
+  height: 360px;
+  object-fit: cover;
+  background: #f3f3f3;
+  margin-bottom: 14px;
+  display: block;
+}
+
+.category-tile h3 {
+  font-size: 13px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.section-title {
+  text-align: center;
+  font-family: 'Playfair Display', serif;
+  font-size: 24px;
+  letter-spacing: 2px;
+  margin-bottom: 32px;
+}
+
+/* Footer */
+.footer {
+  background: #000;
+  color: #ccc;
+  text-align: center;
+  padding: 24px;
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+
+/* Signup */
+.signup {
+  background: #f7f7f7;
+  text-align: center;
+  padding: 56px 24px;
+}
+
+.signup-text {
+  font-size: 14px;
+  color: #555;
+  margin-bottom: 24px;
+}
+
+.signup-form {
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.phone-input-group {
+  display: flex;
+  gap: 8px;
+}
+
+.country-code {
+  display: flex;
+  align-items: center;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 12px 10px;
+  font-size: 14px;
+  background: #f0f0f0;
+  color: #555;
+}
+
+.phone-number {
+  flex: 1;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 12px 14px;
+  font-size: 14px;
+}
+
+.phone-number:focus {
+  outline: none;
+  border-color: #1a1a1a;
+}
+
+.signup-submit {
+  background: #000;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 12px 28px;
+  font-size: 13px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.signup-submit:hover {
+  background: #333;
+}
+
+.error-msg {
+  display: block;
+  color: #c0392b;
+  font-size: 12px;
+  margin-top: 10px;
+  min-height: 14px;
+}
+
+.success-msg {
+  display: block;
+  color: #1a7a3a;
+  font-size: 12px;
+  margin-top: 10px;
+  min-height: 14px;
+}
+
+@media (max-width: 480px) {
+  .phone-input-group {
+    flex-wrap: wrap;
+  }
+
+  .signup-submit {
+    width: 100%;
+  }
+
+  .header-top {
+    padding: 14px 16px;
+  }
+
+  .logo {
+    font-size: 20px;
+  }
+
+  .nav {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 14px;
+    padding: 10px 16px 14px;
+  }
+
+  .hero-content h1 {
+    font-size: 28px;
+  }
+}
