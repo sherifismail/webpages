@@ -1,0 +1,16 @@
+<head>
+    <script>
+        window.addEventListener("message",function(event) {
+            console.log(`Post Event Event in CRM WebPage:${event}`);
+        });
+        window.CallbackParent=function(data) {
+            console.log(`Received Event in CRM WebPage:${data}`)
+        }
+    </script>
+</head>
+<body>
+    <div>
+        <iframe id="cxwebsocket" allow="*" src="notificationsWebsocket.html" style="display: none;"></iframe>></iframe>
+    </div>
+    
+</body>
