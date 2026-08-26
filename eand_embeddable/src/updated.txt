@@ -1,0 +1,82 @@
+// ==UserScript==
+// @name         GPE GPE GPE !!!
+// @namespace    http://tampermonkey.net/
+// @version      0.1
+// @description  GPE Demo with data
+// @author       You
+// @match        https://*.adcb.com/*
+// @grant        none
+// ==/UserScript==
+
+// TO DELETE GPE CACE USE THIS COMMAND : Genesys('command', 'Identifiers.purgeAll', {});
+let d, expires;
+var GPE1 ='' ;
+var GPE2 ='' ;
+var GPE3 ='' ;
+var GPE4 ='' ;
+var GPE5 ='' ;
+var GPE6 ='' ;
+
+(function (g, e, n, es, ys) {
+g['_genesysJs'] = e;
+g[e] = g[e] || function () {
+  (g[e].q = g[e].q || []).push(arguments)
+};
+g[e].t = 1 * new Date();
+g[e].c = es;
+ys = document.createElement('script'); ys.async = 1; ys.src = n; ys.charset = 'utf-8'; document.head.appendChild(ys);
+})(window, 'Genesys', 'https://apps.mypurecloud.ie/genesys-bootstrap/genesys.min.js', {
+environment: 'euw1',
+  deploymentId: 'c93707fc-e908-4246-aa9a-307b6f034ed4' // 2023 WEB-messenger GENESYS Generic
+});
+
+Genesys('subscribe', 'Journey.ready', () => {
+console.log('The journey plugin is ready!');
+});
+
+
+if (document.location.href.match("https://www.adcb.com/en/personal/loans/car-loans/car-loan.aspx"))
+{
+    setTimeout(function()
+{
+        d = new Date();
+        d.setTime(d.getTime() + (14*24*60*60*1000));
+        expires = "expires="+ d.toUTCString();
+
+
+GPE1 = document.getElementById("_paymentvalueAmn").value;
+GPE2 = document.getElementById("_downPaymentPer").value;
+GPE3 = document.getElementsByClassName("o-range-slider__value months")[0].value;
+
+console.log('####: ADCB Demo :) ', GPE1 , GPE2 , GPE3 );
+Genesys('command', 'Journey.record',{
+eventName: 'LoanDetails',
+customAttributes: {
+LoanAmount: GPE1, Downpayment: GPE2, Tennure: GPE3},
+});
+console.log('##: Current code line is 68 !!!');
+document.cookie = 'GPE1cookie=' + GPE1 +';' + expires + ';domain=.adcb.com; path=/';
+document.cookie = 'GPE2cookie=' + GPE2 +';' + expires + ';domain=.adcb.com; path=/';
+document.cookie = 'GPE3cookie=' + GPE3 +';' + expires + ';domain=.adcb.com; path=/';
+Genesys("command", "Database.set", {
+    messaging: {
+     customAttributes: {
+       name: "hsein",
+         last: "kray",
+        email: "h.krayani@gmail.com",
+        phone: "+971558344650",
+        demobot: "yes",
+         GPE1: GPE1,
+         GPE2: GPE2,
+         GPE3: GPE3
+        }
+    }
+    });
+
+
+
+
+
+    }, 20000);
+}
+
