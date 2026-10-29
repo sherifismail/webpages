@@ -20,9 +20,9 @@
 
 <script>
   const CONFIG = {
-    region: "mypurecloud.ie",
-    clientId: "7748b312-9ef5-4e90-803f-743f45f8dcde",
-    redirectUri: "https://sherifismail.github.io/webpages/gc_makecall.html"
+    region: "mypurecloud.ie",                                      // your Genesys Cloud region domain
+    clientId: "7748b312-9ef5-4e90-803f-743f45f8dcde",                                     // the PKCE (Code Authorization) client ID
+    redirectUri: "https://sherifismail.github.io/webpages/gc_makecall.html"  // must match the OAuth client exactly
   };
 
   let accessToken = null;
@@ -76,6 +76,7 @@
   }
 
   function onToken(token) {
+    sessionStorage.removeItem("auto_login_tried");   // allow auto-login again on a future fresh visit
     accessToken = token;
     document.getElementById("token").value = token;
     document.getElementById("status").textContent = "Signed in.";
@@ -93,11 +94,15 @@
     const code = url.searchParams.get("code");
     const error = url.searchParams.get("error");
 
-    if (error) { needLogin(`Login error: ${error}`); return; }
+    if (error) {
+      // Something went wrong at Genesys (e.g. session expired) — let the user retry manually.
+      needLogin(`Login error: ${error}`);
+      return;
+    }
 
     if (code) {
-      // Clean the code out of the address bar
-      history.replaceState(null, "", CONFIG.redirectUri);
+      // We came back from Genesys with an authorization code — exchange it for a token.
+      history.replaceState(null, "", CONFIG.redirectUri);   // clean the code out of the address bar
       try {
         document.getElementById("status").textContent = "Exchanging code...";
         const data = await exchangeCode(code);
@@ -105,8 +110,16 @@
       } catch (e) {
         needLogin(e.message);
       }
+      return;
+    }
+
+    // No code and no error — first visit. Try signing in automatically, but only once per load
+    // so we never get stuck in a redirect loop if Genesys returns neither a code nor an error.
+    if (!sessionStorage.getItem("auto_login_tried")) {
+      sessionStorage.setItem("auto_login_tried", "1");
+      startLogin();
     } else {
-      needLogin("Not signed in.");
+      needLogin("Couldn't sign in automatically.");
     }
   })();
 
