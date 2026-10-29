@@ -9,15 +9,12 @@
   <p id="status">Loading...</p>
   <button id="login" style="display:none">Log in to Genesys Cloud</button>
 
-  <p>Token:</p>
-  <textarea id="token" rows="4" cols="80" readonly></textarea>
-
   <h2>Make a Call</h2>
   <p>Party ID: <span id="partyidOut">(none)</span></p>
   <input id="phone" type="tel" placeholder="+971501234567" size="30">
   <button id="callBtn" disabled>Make Call</button>
   <h3>API Response</h3>
-  <div id="callOutput">No call made yet.</div>
+  <div id="callOutput" style="white-space:pre-wrap">No call made yet.</div>
 
 <script>
   const CONFIG = {
@@ -92,7 +89,6 @@
   function onToken(token) {
     sessionStorage.removeItem("auto_login_tried");   // allow auto-login again on a future fresh visit
     accessToken = token;
-    document.getElementById("token").value = token;
     document.getElementById("status").textContent = "Signed in.";
     document.getElementById("login").style.display = "none";
     document.getElementById("callBtn").disabled = false;
@@ -138,6 +134,19 @@
 
   document.getElementById("login").addEventListener("click", startLogin);
 
+  // --- Set the external tag on a conversation (PUT /api/v2/conversations/{id}/tags) ---
+  async function setExternalTag(conversationId, tagValue) {
+    const res = await fetch(
+      `https://api.${CONFIG.region}/api/v2/conversations/${conversationId}/tags`,
+      {
+        method: "PUT",
+        headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ externalTag: tagValue })
+      }
+    );
+    return { status: res.status, statusText: res.statusText, ok: res.ok, text: await res.text() };
+  }
+
   async function makeCall() {
     const out = document.getElementById("callOutput");
     const phone = document.getElementById("phone").value.trim();
@@ -165,7 +174,27 @@
         headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" },
         body: JSON.stringify(requestBody)
       });
-      out.textContent = `Status: ${r.status} ${r.statusText}\n\nSent body:\n${JSON.stringify(requestBody, null, 2)}\n\nResponse:\n${await r.text()}`;
+      const callText = await r.text();
+
+      let log = `Make Call -> ${r.status} ${r.statusText}\n\nSent body:\n${JSON.stringify(requestBody, null, 2)}\n\nResponse:\n${callText}`;
+
+      // Only tag if the call succeeded and we have a partyid to use as the tag value.
+      if (r.ok && partyId) {
+        let newConversationId = null;
+        try { newConversationId = JSON.parse(callText).id; } catch (_) {}
+
+        if (newConversationId) {
+          out.textContent = log + `\n\nNew conversation id: ${newConversationId}\nSetting external tag...`;
+          const tag = await setExternalTag(newConversationId, partyId);
+          log += `\n\nNew conversation id: ${newConversationId}\n\nSet Tag (externalTag="${partyId}") -> ${tag.status} ${tag.statusText}\n\nResponse:\n${tag.text || "(empty)"}`;
+        } else {
+          log += `\n\nCouldn't find a conversation id in the response, so no tag was set.`;
+        }
+      } else if (!partyId) {
+        log += `\n\nNo partyid in the URL, so no tag was set.`;
+      }
+
+      out.textContent = log;
     } catch (e) { out.textContent = `Request failed: ${e.message}`; }
   }
   document.getElementById("callBtn").addEventListener("click", makeCall);
