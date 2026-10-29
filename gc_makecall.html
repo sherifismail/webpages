@@ -31,8 +31,6 @@
       const val = params.get(key);
       if (val) sessionStorage.setItem(key, val);
     });
-    document.getElementById("partyidOut").textContent =
-      sessionStorage.getItem("partyid") || "(none)";
   }
 
   // --- PKCE helpers ---
