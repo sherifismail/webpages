@@ -151,7 +151,7 @@
     const out = document.getElementById("callOutput");
     const phone = document.getElementById("phone").value.trim();
     if (!/^\+?[0-9]{7,15}$/.test(phone)) {
-      out.textContent = "Enter a valid number, e.g. +971501234567.";
+      out.textContent = "Enter a valid number, e.g. +971501234567, 0501234567, or 042345678..";
       return;
     }
 
