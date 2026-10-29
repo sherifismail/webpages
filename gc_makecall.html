@@ -13,8 +13,7 @@
   <p>Party ID: <span id="partyidOut">(none)</span></p>
   <input id="phone" type="tel" placeholder="+971501234567" size="30">
   <button id="callBtn" disabled>Make Call</button>
-  <h3>API Response</h3>
-  <div id="callOutput" style="white-space:pre-wrap">No call made yet.</div>
+  <div id="callOutput" style="margin-top:1rem;font-weight:bold;font-size:1.1rem"></div>
 
 <script>
   const CONFIG = {
@@ -146,12 +145,16 @@
     );
     return { status: res.status, statusText: res.statusText, ok: res.ok, text: await res.text() };
   }
-
+  function showStatus(msg, color) {
+    const out = document.getElementById("callOutput");
+    out.textContent = msg;
+    out.style.color = color || "inherit";
+  }
   async function makeCall() {
     const out = document.getElementById("callOutput");
     const phone = document.getElementById("phone").value.trim();
     if (!/^\+?[0-9]{7,15}$/.test(phone)) {
-      out.textContent = "Enter a valid number, e.g. +971501234567, 0501234567, or 042345678..";
+      showStatus("Enter a valid number, e.g. +971501234567, 0501234567, or 042345678.", "#b00");
       return;
     }
 
@@ -175,14 +178,16 @@
         body: JSON.stringify(requestBody)
       });
       
+      howStatus("Calling...", "#555");
+    try {
+      // ...fetch unchanged...
       const callText = await r.text();
 
       if (!r.ok) {
-        out.textContent = "Call failed.";
+        showStatus("Call failed.", "#b00");
         return;
       }
 
-      // Only tag if the call succeeded and we have a partyid to use as the tag value.
       if (partyId) {
         let newConversationId = null;
         try { newConversationId = JSON.parse(callText).id; } catch (_) {}
@@ -191,8 +196,8 @@
         }
       }
 
-      out.textContent = "Call placed.";
-    } catch (e) { out.textContent = "Call failed."; }
+      showStatus("Call placed.", "#0a7d00");
+    } catch (e) { showStatus("Call failed.", "#b00"); }
   }
   document.getElementById("callBtn").addEventListener("click", makeCall);
 </script>
