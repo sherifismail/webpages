@@ -31,12 +31,14 @@
   // --- Capture partyid from the URL as early as possible, before any redirect ---
   // The OAuth round trip to Genesys strips the original query string, so we stash
   // partyid in sessionStorage and read it back when we make the call.
-  function capturePartyId() {
-    const fromUrl = new URL(window.location.href).searchParams.get("partyid");
-    if (fromUrl) sessionStorage.setItem("partyid", fromUrl);
-    const stored = sessionStorage.getItem("partyid");
-    document.getElementById("partyidOut").textContent = stored || "(none)";
-    return stored;
+  function captureParams() {
+    const params = new URL(window.location.href).searchParams;
+    ["partyid", "campaignid", "conversationid"].forEach(key => {
+      const val = params.get(key);
+      if (val) sessionStorage.setItem(key, val);
+    });
+    document.getElementById("partyidOut").textContent =
+      sessionStorage.getItem("partyid") || "(none)";
   }
 
   // --- PKCE helpers ---
@@ -102,7 +104,7 @@
   }
 
   (async function init() {
-    capturePartyId();   // must run first, before any redirect strips the query string
+    captureParams();   // must run first, before any redirect strips the query string
 
     const url = new URL(window.location.href);
     const code = url.searchParams.get("code");
