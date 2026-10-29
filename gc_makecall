@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Genesys Cloud Token</title>
+</head>
+<body>
+  <h2>Genesys Cloud Bearer Token</h2>
+  <p id="status">Checking your session...</p>
+  <button id="login" style="display:none">Log in to Genesys Cloud</button>
+
+  <p>Token:</p>
+  <textarea id="token" rows="4" cols="80" readonly></textarea>
+
+  <h2>Make a Call</h2>
+  <input id="phone" type="tel" placeholder="+971501234567" size="30">
+  <button id="callBtn" disabled>Make Call</button>
+  <h3>API Response</h3>
+  <div id="callOutput">No call made yet.</div>
+
+<script>
+  const CONFIG = {
+    region: "mypurecloud.ie",
+    clientId: "YOUR_CLIENT_ID",
+    redirectUri: "http://localhost:8080/index.html"
+  };
+
+  let accessToken = null;
+
+  function authorizeUrl(silent) {
+    const params = new URLSearchParams({
+      client_id: CONFIG.clientId,
+      response_type: "token",
+      redirect_uri: CONFIG.redirectUri
+    });
+    if (silent) params.set("prompt", "none");
+    return `https://login.${CONFIG.region}/oauth/authorize?${params}`;
+  }
+
+  function parseHash(hash) {
+    const p = new URLSearchParams(hash.replace(/^#/, ""));
+    return { token: p.get("access_token"), error: p.get("error") };
+  }
+
+  function onToken(token) {
+    accessToken = token;
+    document.getElementById("token").value = token;
+    document.getElementById("status").textContent = "Signed in.";
+    document.getElementById("login").style.display = "none";
+    document.getElementById("callBtn").disabled = false;
+  }
+
+  function needLogin() {
+    document.getElementById("status").textContent = "Session not active. Please log in.";
+    document.getElementById("login").style.display = "inline-block";
+  }
+
+  // 1. If we were redirected back with a token in the fragment, use it.
+  const fromRedirect = parseHash(window.location.hash);
+  if (fromRedirect.token) {
+    history.replaceState(null, "", window.location.pathname);
+    onToken(fromRedirect.token);
+  } else {
+    // 2. Otherwise try a silent attempt in a hidden iframe.
+    trySilent();
+  }
+
+  function trySilent() {
+    const iframe = document.createElement("iframe");
+    iframe.style.display = "none";
+    iframe.src = authorizeUrl(true);
+
+    // The iframe will redirect to our redirectUri with a token or an error
+    // in its fragment. Because it's same-origin, we can read it.
+    const timer = setTimeout(() => { cleanup(); needLogin(); }, 8000);
+
+    iframe.onload = () => {
+      let hash = "";
+      try { hash = iframe.contentWindow.location.hash; }
+      catch (e) { return; } // cross-origin = still on the login page
+      const res = parseHash(hash);
+      clearTimeout(timer);
+      cleanup();
+      if (res.token) onToken(res.token);
+      else needLogin();
+    };
+
+    function cleanup() { if (iframe.parentNode) iframe.remove(); }
+    document.body.appendChild(iframe);
+  }
+
+  // 3. Manual login falls back to a full-page redirect.
+  document.getElementById("login").addEventListener("click", () => {
+    window.location.href = authorizeUrl(false);
+  });
+
+  async function makeCall() {
+    const out = document.getElementById("callOutput");
+    const phone = document.getElementById("phone").value.trim();
+    if (!/^\+?[0-9]{7,15}$/.test(phone)) {
+      out.textContent = "Enter a valid number, e.g. +971501234567.";
+      return;
+    }
+    out.textContent = "Calling...";
+    try {
+      const r = await fetch(`https://api.${CONFIG.region}/api/v2/conversations/calls`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ phoneNumber: phone })
+      });
+      out.textContent = `Status: ${r.status} ${r.statusText}\n\n${await r.text()}`;
+    } catch (e) { out.textContent = `Request failed: ${e.message}`; }
+  }
+  document.getElementById("callBtn").addEventListener("click", makeCall);
+</script>
+</body>
+</html>
