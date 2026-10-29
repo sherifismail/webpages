@@ -13,6 +13,7 @@
   <textarea id="token" rows="4" cols="80" readonly></textarea>
 
   <h2>Make a Call</h2>
+  <p>Party ID: <span id="partyidOut">(none)</span></p>
   <input id="phone" type="tel" placeholder="+971501234567" size="30">
   <button id="callBtn" disabled>Make Call</button>
   <h3>API Response</h3>
@@ -21,11 +22,22 @@
 <script>
   const CONFIG = {
     region: "mypurecloud.ie",                                      // your Genesys Cloud region domain
-    clientId: "7748b312-9ef5-4e90-803f-743f45f8dcde",                                     // the PKCE (Code Authorization) client ID
+    clientId: "7748b312-9ef5-4e90-803f-743f45f8dcde",                                    // the PKCE (Code Authorization) client ID
     redirectUri: "https://sherifismail.github.io/webpages/gc_makecall.html"  // must match the OAuth client exactly
   };
 
   let accessToken = null;
+
+  // --- Capture partyid from the URL as early as possible, before any redirect ---
+  // The OAuth round trip to Genesys strips the original query string, so we stash
+  // partyid in sessionStorage and read it back when we make the call.
+  function capturePartyId() {
+    const fromUrl = new URL(window.location.href).searchParams.get("partyid");
+    if (fromUrl) sessionStorage.setItem("partyid", fromUrl);
+    const stored = sessionStorage.getItem("partyid");
+    document.getElementById("partyidOut").textContent = stored || "(none)";
+    return stored;
+  }
 
   // --- PKCE helpers ---
   function randomString(len) {
@@ -90,18 +102,18 @@
   }
 
   (async function init() {
+    capturePartyId();   // must run first, before any redirect strips the query string
+
     const url = new URL(window.location.href);
     const code = url.searchParams.get("code");
     const error = url.searchParams.get("error");
 
     if (error) {
-      // Something went wrong at Genesys (e.g. session expired) — let the user retry manually.
       needLogin(`Login error: ${error}`);
       return;
     }
 
     if (code) {
-      // We came back from Genesys with an authorization code — exchange it for a token.
       history.replaceState(null, "", CONFIG.redirectUri);   // clean the code out of the address bar
       try {
         document.getElementById("status").textContent = "Exchanging code...";
@@ -113,8 +125,7 @@
       return;
     }
 
-    // No code and no error — first visit. Try signing in automatically, but only once per load
-    // so we never get stuck in a redirect loop if Genesys returns neither a code nor an error.
+    // First visit: try signing in automatically, but only once per load to avoid a redirect loop.
     if (!sessionStorage.getItem("auto_login_tried")) {
       sessionStorage.setItem("auto_login_tried", "1");
       startLogin();
@@ -132,14 +143,22 @@
       out.textContent = "Enter a valid number, e.g. +971501234567.";
       return;
     }
+
+    // Build the request body. Only include attributes if we actually have a partyid.
+    const requestBody = { phoneNumber: phone };
+    const partyId = sessionStorage.getItem("partyid");
+    if (partyId) {
+      requestBody.attributes = { partyid: partyId };
+    }
+
     out.textContent = "Calling...";
     try {
       const r = await fetch(`https://api.${CONFIG.region}/api/v2/conversations/calls`, {
         method: "POST",
         headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ phoneNumber: phone })
+        body: JSON.stringify(requestBody)
       });
-      out.textContent = `Status: ${r.status} ${r.statusText}\n\n${await r.text()}`;
+      out.textContent = `Status: ${r.status} ${r.statusText}\n\nSent body:\n${JSON.stringify(requestBody, null, 2)}\n\nResponse:\n${await r.text()}`;
     } catch (e) { out.textContent = `Request failed: ${e.message}`; }
   }
   document.getElementById("callBtn").addEventListener("click", makeCall);
