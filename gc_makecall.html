@@ -2,11 +2,11 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Genesys Cloud Token</title>
+  <title>Genesys Cloud Token (PKCE)</title>
 </head>
 <body>
   <h2>Genesys Cloud Bearer Token</h2>
-  <p id="status">Checking your session...</p>
+  <p id="status">Loading...</p>
   <button id="login" style="display:none">Log in to Genesys Cloud</button>
 
   <p>Token:</p>
@@ -27,19 +27,52 @@
 
   let accessToken = null;
 
-  function authorizeUrl(silent) {
-    const params = new URLSearchParams({
-      client_id: CONFIG.clientId,
-      response_type: "token",
-      redirect_uri: CONFIG.redirectUri
-    });
-    if (silent) params.set("prompt", "none");
-    return `https://login.${CONFIG.region}/oauth/authorize?${params}`;
+  // --- PKCE helpers ---
+  function randomString(len) {
+    const arr = new Uint8Array(len);
+    crypto.getRandomValues(arr);
+    return Array.from(arr, b => ("0" + b.toString(16)).slice(-2)).join("");
+  }
+  function base64url(buffer) {
+    return btoa(String.fromCharCode(...new Uint8Array(buffer)))
+      .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+  async function challengeFromVerifier(verifier) {
+    const data = new TextEncoder().encode(verifier);
+    const digest = await crypto.subtle.digest("SHA-256", data);
+    return base64url(digest);
   }
 
-  function parseHash(hash) {
-    const p = new URLSearchParams(hash.replace(/^#/, ""));
-    return { token: p.get("access_token"), error: p.get("error") };
+  async function startLogin() {
+    const verifier = randomString(48);
+    sessionStorage.setItem("pkce_verifier", verifier);
+    const challenge = await challengeFromVerifier(verifier);
+    const params = new URLSearchParams({
+      client_id: CONFIG.clientId,
+      response_type: "code",
+      redirect_uri: CONFIG.redirectUri,
+      code_challenge: challenge,
+      code_challenge_method: "S256"
+    });
+    window.location.href = `https://login.${CONFIG.region}/oauth/authorize?${params}`;
+  }
+
+  async function exchangeCode(code) {
+    const verifier = sessionStorage.getItem("pkce_verifier");
+    const body = new URLSearchParams({
+      grant_type: "authorization_code",
+      code: code,
+      redirect_uri: CONFIG.redirectUri,
+      client_id: CONFIG.clientId,
+      code_verifier: verifier
+    });
+    const res = await fetch(`https://login.${CONFIG.region}/oauth/token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: body
+    });
+    if (!res.ok) throw new Error(`Token exchange failed: ${res.status} ${await res.text()}`);
+    return res.json();
   }
 
   function onToken(token) {
@@ -50,49 +83,34 @@
     document.getElementById("callBtn").disabled = false;
   }
 
-  function needLogin() {
-    document.getElementById("status").textContent = "Session not active. Please log in.";
+  function needLogin(msg) {
+    document.getElementById("status").textContent = msg || "Please log in.";
     document.getElementById("login").style.display = "inline-block";
   }
 
-  // 1. If we were redirected back with a token in the fragment, use it.
-  const fromRedirect = parseHash(window.location.hash);
-  if (fromRedirect.token) {
-    history.replaceState(null, "", window.location.pathname);
-    onToken(fromRedirect.token);
-  } else {
-    // 2. Otherwise try a silent attempt in a hidden iframe.
-    trySilent();
-  }
+  (async function init() {
+    const url = new URL(window.location.href);
+    const code = url.searchParams.get("code");
+    const error = url.searchParams.get("error");
 
-  function trySilent() {
-    const iframe = document.createElement("iframe");
-    iframe.style.display = "none";
-    iframe.src = authorizeUrl(true);
+    if (error) { needLogin(`Login error: ${error}`); return; }
 
-    // The iframe will redirect to our redirectUri with a token or an error
-    // in its fragment. Because it's same-origin, we can read it.
-    const timer = setTimeout(() => { cleanup(); needLogin(); }, 8000);
+    if (code) {
+      // Clean the code out of the address bar
+      history.replaceState(null, "", CONFIG.redirectUri);
+      try {
+        document.getElementById("status").textContent = "Exchanging code...";
+        const data = await exchangeCode(code);
+        onToken(data.access_token);
+      } catch (e) {
+        needLogin(e.message);
+      }
+    } else {
+      needLogin("Not signed in.");
+    }
+  })();
 
-    iframe.onload = () => {
-      let hash = "";
-      try { hash = iframe.contentWindow.location.hash; }
-      catch (e) { return; } // cross-origin = still on the login page
-      const res = parseHash(hash);
-      clearTimeout(timer);
-      cleanup();
-      if (res.token) onToken(res.token);
-      else needLogin();
-    };
-
-    function cleanup() { if (iframe.parentNode) iframe.remove(); }
-    document.body.appendChild(iframe);
-  }
-
-  // 3. Manual login falls back to a full-page redirect.
-  document.getElementById("login").addEventListener("click", () => {
-    window.location.href = authorizeUrl(false);
-  });
+  document.getElementById("login").addEventListener("click", startLogin);
 
   async function makeCall() {
     const out = document.getElementById("callOutput");
