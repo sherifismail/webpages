@@ -188,11 +188,12 @@
         return;
       }
 
-      if (partyId) {
+      // Tag the new call with the conversationid passed in the URL (as the external tag value).
+      if (mainConversationId) {
         let newConversationId = null;
         try { newConversationId = JSON.parse(callText).id; } catch (_) {}
         if (newConversationId) {
-          await setExternalTag(newConversationId, partyId);
+          await setExternalTag(newConversationId, mainConversationId);
         }
       }
 
