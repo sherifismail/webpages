@@ -174,28 +174,25 @@
         headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" },
         body: JSON.stringify(requestBody)
       });
+      
       const callText = await r.text();
 
-      let log = `Make Call -> ${r.status} ${r.statusText}\n\nSent body:\n${JSON.stringify(requestBody, null, 2)}\n\nResponse:\n${callText}`;
-
-      // Only tag if the call succeeded and we have a partyid to use as the tag value.
-      if (r.ok && partyId) {
-        let newConversationId = null;
-        try { newConversationId = JSON.parse(callText).id; } catch (_) {}
-
-        if (newConversationId) {
-          out.textContent = log + `\n\nNew conversation id: ${newConversationId}\nSetting external tag...`;
-          const tag = await setExternalTag(newConversationId, partyId);
-          log += `\n\nNew conversation id: ${newConversationId}\n\nSet Tag (externalTag="${partyId}") -> ${tag.status} ${tag.statusText}\n\nResponse:\n${tag.text || "(empty)"}`;
-        } else {
-          log += `\n\nCouldn't find a conversation id in the response, so no tag was set.`;
-        }
-      } else if (!partyId) {
-        log += `\n\nNo partyid in the URL, so no tag was set.`;
+      if (!r.ok) {
+        out.textContent = "Call failed.";
+        return;
       }
 
-      out.textContent = log;
-    } catch (e) { out.textContent = `Request failed: ${e.message}`; }
+      // Only tag if the call succeeded and we have a partyid to use as the tag value.
+      if (partyId) {
+        let newConversationId = null;
+        try { newConversationId = JSON.parse(callText).id; } catch (_) {}
+        if (newConversationId) {
+          await setExternalTag(newConversationId, partyId);
+        }
+      }
+
+      out.textContent = "Call placed.";
+    } catch (e) { out.textContent = "Call failed."; }
   }
   document.getElementById("callBtn").addEventListener("click", makeCall);
 </script>
