@@ -145,14 +145,17 @@
     );
     return { status: res.status, statusText: res.statusText, ok: res.ok, text: await res.text() };
   }
+
   function showStatus(msg, color) {
     const out = document.getElementById("callOutput");
     out.textContent = msg;
     out.style.color = color || "inherit";
   }
+
   async function makeCall() {
     const out = document.getElementById("callOutput");
     const phone = document.getElementById("phone").value.trim();
+    // Accept E.164 (+ then digits) or UAE local formats like 0501234567 / 042345678.
     if (!/^\+?[0-9]{7,15}$/.test(phone)) {
       showStatus("Enter a valid number, e.g. +971501234567, 0501234567, or 042345678.", "#b00");
       return;
@@ -170,17 +173,13 @@
                                };
     }
 
-    out.textContent = "Calling...";
+    showStatus("Calling...", "#555");
     try {
       const r = await fetch(`https://api.${CONFIG.region}/api/v2/conversations/calls`, {
         method: "POST",
         headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" },
         body: JSON.stringify(requestBody)
       });
-      
-      howStatus("Calling...", "#555");
-    try {
-      // ...fetch unchanged...
       const callText = await r.text();
 
       if (!r.ok) {
