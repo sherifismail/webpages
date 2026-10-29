@@ -147,8 +147,13 @@
     // Build the request body. Only include attributes if we actually have a partyid.
     const requestBody = { phoneNumber: phone };
     const partyId = sessionStorage.getItem("partyid");
-    if (partyId) {
-      requestBody.attributes = { partyid: partyId };
+    const campaignId = sessionStorage.getItem("campaignid");
+    const mainConversationId = sessionStorage.getItem("conversationid");
+    if (partyId != null && campaignId != null && mainConversationId != null) {
+      requestBody.attributes = { partyid: partyId,
+                                campaignid:campaignId,
+                                mainConversationid:mainConversationId
+                               };
     }
 
     out.textContent = "Calling...";
