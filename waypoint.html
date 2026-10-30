@@ -227,7 +227,7 @@
   <!-- shown until a key is connected -->
   <section class="setup" id="setup">
     <h2>Connect a Google Maps key to begin</h2>
-    <p>This page runs entirely in your browser using the Google Maps JavaScript API. Paste a key below to load the map, address search, and distance lookup. The key stays in this tab only and is never sent anywhere except Google.</p>
+    <p>This page runs entirely in your browser using the Google Maps JavaScript API. Paste a key below to load the map and route lookup, then type a full address or place name into each field. The key stays in this tab only and is never sent anywhere except Google.</p>
     <div class="keyrow">
       <input id="keyInput" type="password" placeholder="Paste your Google Maps API key" autocomplete="off" spellcheck="false" />
       <button class="go" id="connectBtn" style="flex:0 0 auto; width:auto; padding:11px 22px;">Connect</button>
@@ -237,7 +237,7 @@
       <summary>How to get a key (2 minutes)</summary>
       <ol>
         <li>Open the <a href="https://console.cloud.google.com/" target="_blank" rel="noopener">Google Cloud Console</a> and create a project, then enable billing (Google gives a recurring free credit).</li>
-        <li>Under <strong>APIs &amp; Services → Library</strong>, enable <code>Maps JavaScript API</code>, <code>Places API</code>, and <code>Geocoding API</code>.</li>
+        <li>Under <strong>APIs &amp; Services → Library</strong>, enable <code>Maps JavaScript API</code>, <code>Geocoding API</code>, and <code>Directions API</code>.</li>
         <li>Under <strong>Credentials</strong>, create an API key.</li>
         <li>Restrict the key to those three APIs, and add an <em>HTTP referrer</em> restriction for the domain where you host this file. Set a daily quota so costs stay capped.</li>
       </ol>
@@ -314,7 +314,7 @@
   "use strict";
 
   var apiKey = null;
-  var map, directionsService, directionsRenderer, geocoder, autoOrigin, autoDest;
+  var map, directionsService, directionsRenderer, geocoder;
   var originLatLng = null;         // set when "use my location" is used
   var selectedMode = "DRIVING";
 
@@ -335,7 +335,7 @@
     window.__wpInit = startApp;
     var s = document.createElement("script");
     s.src = "https://maps.googleapis.com/maps/api/js?key=" + encodeURIComponent(k) +
-            "&libraries=places&callback=__wpInit&loading=async";
+            "&callback=__wpInit&loading=async";
     s.async = true;
     s.onerror = function () { msg.textContent = "Could not load the Maps script. Check your network."; };
     // Google reports key problems via an auth failure callback:
@@ -369,9 +369,7 @@
       polylineOptions: { strokeColor: cssVar("--accent"), strokeWeight: 5, strokeOpacity: 0.9 }
     });
 
-    autoOrigin = new google.maps.places.Autocomplete(el("origin"), { fields: ["geometry", "formatted_address", "name"] });
-    autoDest   = new google.maps.places.Autocomplete(el("dest"),   { fields: ["geometry", "formatted_address", "name"] });
-    // typing a new origin cancels the geolocation override
+    // typing a new origin cancels the "use my location" override
     el("origin").addEventListener("input", function () { originLatLng = null; });
 
     // mode buttons
