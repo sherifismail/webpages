@@ -195,6 +195,12 @@
   .coords .arrow { color: var(--accent); }
   .msg { margin-top: 14px; font-size: .86rem; color: var(--accent-ink); min-height: 1.2em; }
 
+  .forget {
+    background: none; border: none; color: var(--muted); font: inherit; font-size: .76rem;
+    text-decoration: underline; cursor: pointer; padding: 0; margin-top: 18px;
+  }
+  .forget:hover { color: var(--accent-ink); }
+
   .mapframe { border: 1.5px solid var(--ink); border-radius: 2px; overflow: hidden;
               box-shadow: var(--shadow); background: var(--map-frame); }
   #map { width: 100%; height: clamp(360px, 62vh, 620px); }
@@ -229,7 +235,7 @@
 
   <section class="setup" id="setup">
     <h2>Connect a Google Maps key to begin</h2>
-    <p>This page runs entirely in your browser using current Google Maps services: Maps JavaScript API for the map, Places API (New) for search suggestions, Geocoding for your location, and the Routes API for distance and travel time. Start typing a place in either field to see suggestions, or paste coordinates as <code>lat, lng</code>. The key stays in this tab only and is sent only to Google.</p>
+    <p>This page runs entirely in your browser using current Google Maps services: Maps JavaScript API for the map, Places API (New) for search suggestions, Geocoding for your location, and the Routes API for distance and travel time. Start typing a place in either field to see suggestions, or paste coordinates as <code>lat, lng</code>. Your key is saved in this browser only (never sent anywhere except Google), so you paste it once.</p>
     <div class="keyrow">
       <input id="keyInput" type="password" placeholder="Paste your Google Maps API key" autocomplete="off" spellcheck="false" />
       <button class="go" id="connectBtn" style="flex:0 0 auto; width:auto; padding:11px 22px;">Connect</button>
@@ -297,6 +303,8 @@
           <div class="coords" id="coords">Enter two points to see the distance and travel time.</div>
           <div class="msg" id="runMsg"></div>
         </div>
+
+        <button class="forget" id="forgetKey" type="button" hidden>Forget saved key on this browser</button>
       </div>
     </section>
 
@@ -314,6 +322,13 @@
 (function () {
   "use strict";
 
+  // ===========================================================================
+  //  PASTE YOUR GOOGLE MAPS API KEY BETWEEN THE QUOTES BELOW.
+  //  When set, the page connects automatically and skips the paste screen.
+  //  Leave it empty ("") to use the on-screen paste box instead.
+  // ===========================================================================
+  var HARDCODED_KEY = "AIzaSyCiAbFn0yo08JEC2INRGz6HhW0QwNrf0B8";
+
   var apiKey = null;
   var map, geocoder;
   var placesLib = null;             // Places API (New) namespace, once loaded
@@ -325,6 +340,12 @@
 
   var el = function (id) { return document.getElementById(id); };
 
+  // ---------- key persistence (guarded; storage is blocked in some sandboxes) ----------
+  var KEY_STORE = "waypoint_gmaps_key";
+  function saveKey(k) { try { localStorage.setItem(KEY_STORE, k); } catch (e) {} }
+  function loadKey()  { try { return localStorage.getItem(KEY_STORE); } catch (e) { return null; } }
+  function clearKey() { try { localStorage.removeItem(KEY_STORE); } catch (e) {} }
+
   el("connectBtn").addEventListener("click", connect);
   el("keyInput").addEventListener("keydown", function (e) { if (e.key === "Enter") connect(); });
 
@@ -334,6 +355,7 @@
     if (!k) { msg.textContent = "Paste a key first."; return; }
     msg.textContent = "Loading Google Maps\u2026";
     apiKey = k;
+    saveKey(k);
 
     window.__wpInit = startApp;
     var s = document.createElement("script");
@@ -342,6 +364,7 @@
     s.async = true;
     s.onerror = function () { msg.textContent = "Could not load the Maps script. Check your network."; };
     window.gm_authFailure = function () {
+      clearKey();
       msg.textContent = "Google rejected this key for the map. Check billing is on and that Maps JavaScript API is enabled and allowed on the key.";
       el("board").hidden = true;
       el("setup").hidden = false;
@@ -389,6 +412,11 @@
 
     el("measureBtn").addEventListener("click", measure);
     el("locateBtn").addEventListener("click", useMyLocation);
+
+    if (loadKey()) {
+      el("forgetKey").hidden = false;
+      el("forgetKey").addEventListener("click", function () { clearKey(); location.reload(); });
+    }
   }
 
   function cssVar(name) {
@@ -649,6 +677,13 @@
     return "under a minute";
   }
   function coord(latLng) { return latLng.latitude.toFixed(4) + ", " + latLng.longitude.toFixed(4); }
+
+  // connect automatically: hardcoded key first, otherwise a key saved last visit
+  (function () {
+    if (HARDCODED_KEY) { el("keyInput").value = HARDCODED_KEY; connect(); return; }
+    var saved = loadKey();
+    if (saved) { el("keyInput").value = saved; connect(); }
+  })();
 })();
 </script>
 </body>
