@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Waypoint — distance & route finder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    color-scheme: light;
+    --paper:   #E9EDE6;
+    --surface: #FFFFFF;
+    --ink:     #15302A;
+    --muted:   #566B62;
+    --line:    #C9D2C6;
+    --line-strong: #AEB9AB;
+    --accent:  #D6246E;
+    --accent-ink: #9C1850;
+    --accent-soft: #FBE4EE;
+    --shadow: 0 1px 0 var(--line), 0 18px 40px -28px rgba(21,48,42,.5);
+    --map-frame: #1d3a33;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --paper:   #0F1E1A;
+      --surface: #152823;
+      --ink:     #E8EFE9;
+      --muted:   #8FA399;
+      --line:    #28403A;
+      --line-strong: #37524A;
+      --accent:  #FF5A9E;
+      --accent-ink: #FF86B6;
+      --accent-soft: #2A1620;
+      --shadow: 0 1px 0 var(--line), 0 20px 46px -26px rgba(0,0,0,.7);
+      --map-frame: #0a1512;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Inter", system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    /* faint latitude/longitude grid, like a survey sheet */
+    background-image:
+      linear-gradient(to right, color-mix(in srgb, var(--line) 55%, transparent) 1px, transparent 1px),
+      linear-gradient(to bottom, color-mix(in srgb, var(--line) 55%, transparent) 1px, transparent 1px);
+    background-size: 46px 46px;
+    background-position: -1px -1px;
+    min-height: 100vh;
+  }
+
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 28px clamp(16px, 4vw, 40px) 64px; }
+
+  /* ---- masthead ---- */
+  header.top {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 16px; flex-wrap: wrap;
+    border-bottom: 1.5px solid var(--ink);
+    padding-bottom: 14px; margin-bottom: 26px;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand svg { width: 26px; height: 26px; display: block; color: var(--accent); }
+  .brand h1 {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 700; font-size: 1.35rem; letter-spacing: -.01em; margin: 0;
+  }
+  .brand .sub { color: var(--muted); font-size: .9rem; }
+  .legend {
+    font-family: "Space Mono", monospace; font-size: .72rem; color: var(--muted);
+    display: flex; gap: 14px; align-items: center;
+  }
+  .legend .dot { display: inline-flex; align-items: center; gap: 6px; }
+  .legend .pip { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
+
+  /* ---- setup banner ---- */
+  .setup {
+    background: var(--surface); border: 1.5px solid var(--ink);
+    border-radius: 2px; padding: 20px clamp(16px,3vw,26px); margin-bottom: 26px;
+    box-shadow: var(--shadow);
+  }
+  .setup h2 { font-family: "Space Grotesk", sans-serif; font-size: 1.05rem; margin: 0 0 6px; }
+  .setup p { margin: 0 0 16px; color: var(--muted); font-size: .92rem; max-width: 62ch; }
+  .keyrow { display: flex; gap: 10px; flex-wrap: wrap; }
+  .keyrow input {
+    flex: 1 1 320px; min-width: 0;
+    font-family: "Space Mono", monospace; font-size: .9rem;
+    padding: 11px 13px; border: 1.5px solid var(--line-strong);
+    background: var(--paper); color: var(--ink); border-radius: 2px;
+  }
+  .keyrow input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+  details.help { margin-top: 16px; font-size: .9rem; }
+  details.help summary { cursor: pointer; color: var(--accent-ink); font-weight: 500; }
+  details.help ol { margin: 12px 0 0; padding-left: 20px; color: var(--muted); }
+  details.help li { margin-bottom: 7px; }
+  details.help a { color: var(--accent-ink); }
+  details.help code {
+    font-family: "Space Mono", monospace; font-size: .82em;
+    background: var(--accent-soft); padding: 1px 5px; border-radius: 2px;
+  }
+
+  /* ---- main grid ---- */
+  .board { display: grid; grid-template-columns: 1.05fr 1.35fr; gap: 22px; align-items: start; }
+  @media (max-width: 860px) { .board { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--surface); border: 1.5px solid var(--ink);
+    border-radius: 2px; box-shadow: var(--shadow); overflow: hidden;
+  }
+  .panel .pad { padding: clamp(16px, 2.4vw, 24px); }
+
+  /* field with endpoint marker */
+  .field { position: relative; margin-bottom: 14px; }
+  .field label {
+    display: block; font-size: .78rem; font-weight: 600; color: var(--muted);
+    margin-bottom: 6px; letter-spacing: .01em;
+  }
+  .field .inbox { position: relative; display: flex; align-items: center; }
+  .field .mark {
+    position: absolute; left: 12px; width: 14px; height: 14px; pointer-events: none;
+  }
+  .mark.origin { color: var(--ink); }
+  .mark.dest { color: var(--accent); }
+  .field input.place {
+    width: 100%; padding: 13px 13px 13px 36px;
+    border: 1.5px solid var(--line-strong); background: var(--paper);
+    color: var(--ink); border-radius: 2px; font-size: .98rem; font-family: inherit;
+  }
+  .field input.place:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+  .connector { height: 10px; margin-left: 6px; border-left: 2px dotted var(--line-strong); }
+
+  .locate {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: none; border: none; color: var(--accent-ink);
+    font: inherit; font-size: .85rem; font-weight: 500; cursor: pointer;
+    padding: 4px 0; margin: -4px 0 14px;
+  }
+  .locate:hover { text-decoration: underline; }
+  .locate svg { width: 15px; height: 15px; }
+
+  /* mode segmented control */
+  .modes { display: grid; grid-template-columns: repeat(4,1fr); gap: 0; margin-bottom: 18px;
+           border: 1.5px solid var(--line-strong); border-radius: 2px; overflow: hidden; }
+  .modes button {
+    font: inherit; font-size: .84rem; padding: 9px 4px; background: var(--paper);
+    border: none; border-right: 1.5px solid var(--line-strong); color: var(--muted); cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+  }
+  .modes button:last-child { border-right: none; }
+  .modes button svg { width: 17px; height: 17px; }
+  .modes button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+
+  .go {
+    width: 100%; padding: 13px; font: inherit; font-weight: 600; font-size: 1rem;
+    background: var(--accent); color: #fff; border: none; border-radius: 2px; cursor: pointer;
+    font-family: "Space Grotesk", sans-serif; letter-spacing: .01em;
+  }
+  .go:hover { background: var(--accent-ink); }
+  .go:disabled { opacity: .5; cursor: not-allowed; }
+  .go:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+  /* result readout */
+  .result { border-top: 1.5px dashed var(--line-strong); margin-top: 20px; padding-top: 18px; }
+  .result.empty .nums { color: var(--muted); }
+  .bignum {
+    font-family: "Space Grotesk", sans-serif; font-weight: 700;
+    font-size: clamp(2.8rem, 8vw, 4.1rem); line-height: .95; letter-spacing: -.03em;
+    color: var(--accent); display: flex; align-items: baseline; gap: .3ch;
+  }
+  .bignum .unit { font-size: .3em; color: var(--ink); font-weight: 600; letter-spacing: 0; }
+  .bignum.dim { color: var(--line-strong); }
+  .duration { margin-top: 8px; font-size: 1.05rem; }
+  .duration strong { font-family: "Space Grotesk", sans-serif; }
+  .coords {
+    font-family: "Space Mono", monospace; font-size: .76rem; color: var(--muted);
+    margin-top: 14px; line-height: 1.7; word-break: break-word;
+  }
+  .coords .arrow { color: var(--accent); }
+  .msg { margin-top: 14px; font-size: .86rem; color: var(--accent-ink); min-height: 1.2em; }
+
+  /* map */
+  .mapframe { border: 1.5px solid var(--ink); border-radius: 2px; overflow: hidden;
+              box-shadow: var(--shadow); background: var(--map-frame); }
+  #map { width: 100%; height: clamp(360px, 62vh, 620px); }
+  .mapplaceholder {
+    width: 100%; height: clamp(360px, 62vh, 620px); display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 10px; color: var(--muted);
+    font-family: "Space Mono", monospace; font-size: .8rem; text-align: center; padding: 20px;
+  }
+  .mapplaceholder svg { width: 40px; height: 40px; opacity: .5; }
+
+  footer { margin-top: 30px; color: var(--muted); font-size: .8rem; border-top: 1px solid var(--line); padding-top: 14px; }
+  footer code { font-family: "Space Mono", monospace; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .go, .locate, .modes button, .field input.place { transition: background .15s ease, color .15s ease, border-color .15s ease; }
+    .bignum { transition: color .25s ease; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12 21s7-6.5 7-12a7 7 0 1 0-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.3"/>
+      </svg>
+      <div>
+        <h1>Waypoint</h1>
+        <div class="sub">Measure the route between two places.</div>
+      </div>
+    </div>
+    <div class="legend">
+      <span class="dot"><span class="pip" style="background:var(--ink)"></span>origin</span>
+      <span class="dot"><span class="pip"></span>destination</span>
+    </div>
+  </header>
+
+  <!-- shown until a key is connected -->
+  <section class="setup" id="setup">
+    <h2>Connect a Google Maps key to begin</h2>
+    <p>This page runs entirely in your browser using the Google Maps JavaScript API. Paste a key below to load the map, address search, and distance lookup. The key stays in this tab only and is never sent anywhere except Google.</p>
+    <div class="keyrow">
+      <input id="keyInput" type="password" placeholder="Paste your Google Maps API key" autocomplete="off" spellcheck="false" />
+      <button class="go" id="connectBtn" style="flex:0 0 auto; width:auto; padding:11px 22px;">Connect</button>
+    </div>
+    <div class="msg" id="setupMsg"></div>
+    <details class="help">
+      <summary>How to get a key (2 minutes)</summary>
+      <ol>
+        <li>Open the <a href="https://console.cloud.google.com/" target="_blank" rel="noopener">Google Cloud Console</a> and create a project, then enable billing (Google gives a recurring free credit).</li>
+        <li>Under <strong>APIs &amp; Services → Library</strong>, enable <code>Maps JavaScript API</code>, <code>Places API</code>, and <code>Geocoding API</code>.</li>
+        <li>Under <strong>Credentials</strong>, create an API key.</li>
+        <li>Restrict the key to those three APIs, and add an <em>HTTP referrer</em> restriction for the domain where you host this file. Set a daily quota so costs stay capped.</li>
+      </ol>
+    </details>
+  </section>
+
+  <!-- main board, hidden until connected -->
+  <div class="board" id="board" hidden>
+    <section class="panel">
+      <div class="pad">
+        <div class="field">
+          <label for="origin">From</label>
+          <div class="inbox">
+            <svg class="mark origin" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="6" stroke="var(--surface)" stroke-width="2"/></svg>
+            <input class="place" id="origin" type="text" placeholder="Address, place, or coordinates" />
+          </div>
+        </div>
+        <div class="connector"></div>
+        <button class="locate" id="locateBtn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+          Use my current location
+        </button>
+
+        <div class="field">
+          <label for="dest">To</label>
+          <div class="inbox">
+            <svg class="mark dest" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s7-6.5 7-12a7 7 0 1 0-14 0c0 5.5 7 12 7 12z"/></svg>
+            <input class="place" id="dest" type="text" placeholder="Address, place, or coordinates" />
+          </div>
+        </div>
+
+        <div class="modes" role="group" aria-label="Travel mode">
+          <button type="button" data-mode="DRIVING" aria-pressed="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 13l1.5-4.5A2 2 0 0 1 8.4 7h7.2a2 2 0 0 1 1.9 1.5L19 13v5H5z"/><circle cx="7.5" cy="15.5" r="1"/><circle cx="16.5" cy="15.5" r="1"/></svg>
+            Drive
+          </button>
+          <button type="button" data-mode="WALKING" aria-pressed="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="13" cy="4.5" r="1.6"/><path d="M11 9l-2 4 2 1 1 6M11 9l3 1 2 3M9 13l-2 5"/></svg>
+            Walk
+          </button>
+          <button type="button" data-mode="BICYCLING" aria-pressed="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/><path d="M6 17l4-8h5l-2 8M10 9h4" stroke-linecap="round"/></svg>
+            Bike
+          </button>
+          <button type="button" data-mode="TRANSIT" aria-pressed="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="6" y="4" width="12" height="13" rx="2"/><path d="M6 11h12M9 20l-1.5 1.5M15 20l1.5 1.5" stroke-linecap="round"/><circle cx="9" cy="14" r=".6" fill="currentColor"/><circle cx="15" cy="14" r=".6" fill="currentColor"/></svg>
+            Transit
+          </button>
+        </div>
+
+        <button class="go" id="measureBtn" type="button">Measure route</button>
+
+        <div class="result empty" id="result">
+          <div class="bignum dim" id="distance">—<span class="unit">km</span></div>
+          <div class="duration" id="duration"></div>
+          <div class="coords" id="coords">Enter two points to see the distance and travel time.</div>
+          <div class="msg" id="runMsg"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="mapframe">
+      <div id="map"></div>
+    </section>
+  </div>
+
+  <footer>
+    Built on the Google Maps JavaScript API (Maps, Places, Directions). Distances follow roads and the chosen travel mode — for straight-line distance you'd use the haversine formula instead. Usage is billed to your own Google Cloud project.
+  </footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var apiKey = null;
+  var map, directionsService, directionsRenderer, geocoder, autoOrigin, autoDest;
+  var originLatLng = null;         // set when "use my location" is used
+  var selectedMode = "DRIVING";
+
+  var el = function (id) { return document.getElementById(id); };
+
+  // ---------- key connection ----------
+  el("connectBtn").addEventListener("click", connect);
+  el("keyInput").addEventListener("keydown", function (e) { if (e.key === "Enter") connect(); });
+
+  function connect() {
+    var k = el("keyInput").value.trim();
+    var msg = el("setupMsg");
+    if (!k) { msg.textContent = "Paste a key first."; return; }
+    msg.textContent = "Loading Google Maps…";
+    apiKey = k;
+
+    // expose the callback Google will call once the library loads
+    window.__wpInit = startApp;
+    var s = document.createElement("script");
+    s.src = "https://maps.googleapis.com/maps/api/js?key=" + encodeURIComponent(k) +
+            "&libraries=places&callback=__wpInit&loading=async";
+    s.async = true;
+    s.onerror = function () { msg.textContent = "Could not load the Maps script. Check your network."; };
+    // Google reports key problems via an auth failure callback:
+    window.gm_authFailure = function () {
+      msg.textContent = "Google rejected this key. Check that it's valid, billing is on, and the three APIs are enabled.";
+      el("board").hidden = true;
+      el("setup").hidden = false;
+    };
+    document.head.appendChild(s);
+  }
+
+  // ---------- app start ----------
+  function startApp() {
+    el("setup").hidden = true;
+    el("board").hidden = false;
+
+    directionsService = new google.maps.DirectionsService();
+    geocoder = new google.maps.Geocoder();
+
+    map = new google.maps.Map(el("map"), {
+      center: { lat: 25.197, lng: 55.274 }, // Dubai, as a neutral starting view
+      zoom: 11,
+      mapTypeControl: false,
+      streetViewControl: false,
+      fullscreenControl: true
+    });
+
+    directionsRenderer = new google.maps.DirectionsRenderer({
+      map: map,
+      suppressMarkers: false,
+      polylineOptions: { strokeColor: cssVar("--accent"), strokeWeight: 5, strokeOpacity: 0.9 }
+    });
+
+    autoOrigin = new google.maps.places.Autocomplete(el("origin"), { fields: ["geometry", "formatted_address", "name"] });
+    autoDest   = new google.maps.places.Autocomplete(el("dest"),   { fields: ["geometry", "formatted_address", "name"] });
+    // typing a new origin cancels the geolocation override
+    el("origin").addEventListener("input", function () { originLatLng = null; });
+
+    // mode buttons
+    Array.prototype.forEach.call(document.querySelectorAll(".modes button"), function (b) {
+      b.addEventListener("click", function () {
+        selectedMode = b.getAttribute("data-mode");
+        document.querySelectorAll(".modes button").forEach(function (x) {
+          x.setAttribute("aria-pressed", x === b ? "true" : "false");
+        });
+      });
+    });
+
+    el("measureBtn").addEventListener("click", measure);
+    el("locateBtn").addEventListener("click", useMyLocation);
+  }
+
+  function cssVar(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || "#D6246E";
+  }
+
+  // ---------- current location ----------
+  function useMyLocation() {
+    var msg = el("runMsg");
+    if (!navigator.geolocation) { msg.textContent = "This browser has no geolocation support."; return; }
+    msg.textContent = "Finding your location…";
+    el("locateBtn").disabled = true;
+    navigator.geolocation.getCurrentPosition(
+      function (pos) {
+        originLatLng = new google.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
+        map.setCenter(originLatLng);
+        geocoder.geocode({ location: originLatLng }, function (res, status) {
+          el("origin").value = (status === "OK" && res[0]) ? res[0].formatted_address
+            : pos.coords.latitude.toFixed(5) + ", " + pos.coords.longitude.toFixed(5);
+        });
+        msg.textContent = "Located you. Now set a destination.";
+        el("locateBtn").disabled = false;
+      },
+      function (err) {
+        msg.textContent = "Couldn't get your location: " + err.message;
+        el("locateBtn").disabled = false;
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }
+
+  // ---------- measure ----------
+  function measure() {
+    var runMsg = el("runMsg");
+    runMsg.textContent = "";
+
+    var destStr = el("dest").value.trim();
+    var originStr = el("origin").value.trim();
+    var origin = originLatLng || originStr;
+
+    if (!origin || !destStr) { runMsg.textContent = "Fill in both a start and a destination."; return; }
+
+    el("measureBtn").disabled = true;
+    el("measureBtn").textContent = "Measuring…";
+
+    directionsService.route({
+      origin: origin,
+      destination: destStr,
+      travelMode: google.maps.TravelMode[selectedMode],
+      provideRouteAlternatives: false
+    }, function (res, status) {
+      el("measureBtn").disabled = false;
+      el("measureBtn").textContent = "Measure route";
+
+      if (status !== "OK" || !res.routes.length) {
+        showError(statusMessage(status));
+        return;
+      }
+      directionsRenderer.setDirections(res);
+      var leg = res.routes[0].legs[0];
+      render(leg);
+    });
+  }
+
+  function render(leg) {
+    var km = leg.distance.value / 1000;
+    var bn = el("distance");
+    bn.classList.remove("dim");
+    bn.innerHTML = fmt(km) + '<span class="unit">km</span>';
+
+    var miles = km * 0.621371;
+    el("duration").innerHTML = "About <strong>" + leg.duration.text + "</strong> · " + fmt(miles) + " mi";
+
+    var o = leg.start_location, d = leg.end_location;
+    el("coords").innerHTML =
+      esc(leg.start_address) + "<br>" +
+      coord(o) + ' <span class="arrow">→</span> ' + coord(d) + "<br>" +
+      esc(leg.end_address);
+
+    el("result").classList.remove("empty");
+  }
+
+  function showError(text) {
+    var bn = el("distance");
+    bn.classList.add("dim");
+    bn.innerHTML = '—<span class="unit">km</span>';
+    el("duration").textContent = "";
+    el("coords").textContent = "No route found.";
+    el("runMsg").textContent = text;
+    el("result").classList.add("empty");
+  }
+
+  function statusMessage(status) {
+    switch (status) {
+      case "ZERO_RESULTS": return "No route exists between those points for this travel mode. Try driving, or check the places.";
+      case "NOT_FOUND": return "One of the places couldn't be found. Try a more specific address.";
+      case "OVER_QUERY_LIMIT": return "Query limit reached on this key. Check your Google Cloud quota.";
+      case "REQUEST_DENIED": return "Request denied — the Directions service may not be enabled for this key.";
+      default: return "Couldn't compute the route (" + status + ").";
+    }
+  }
+
+  function fmt(n) { return n >= 100 ? Math.round(n).toString() : n.toFixed(1); }
+  function coord(latLng) { return latLng.lat().toFixed(4) + ", " + latLng.lng().toFixed(4); }
+  function esc(s) { var d = document.createElement("div"); d.textContent = s || ""; return d.innerHTML; }
+})();
+</script>
+</body>
+</html>
