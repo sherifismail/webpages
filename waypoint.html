@@ -131,6 +131,23 @@
   .field input.place:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
   .connector { height: 10px; margin-left: 6px; border-left: 2px dotted var(--line-strong); }
 
+  .suggest {
+    list-style: none; margin: 0; padding: 4px; position: absolute;
+    top: calc(100% + 4px); left: 0; right: 0; z-index: 40;
+    background: var(--surface); border: 1.5px solid var(--ink); border-radius: 2px;
+    box-shadow: var(--shadow); max-height: 260px; overflow-y: auto;
+  }
+  .suggest li {
+    padding: 9px 11px; font-size: .9rem; cursor: pointer; border-radius: 2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .suggest li:hover, .suggest li.on { background: var(--accent-soft); color: var(--accent-ink); }
+  .suggest li.by {
+    cursor: default; font-size: .66rem; color: var(--muted); text-align: right;
+    padding: 6px 8px 2px; font-family: "Space Mono", monospace;
+  }
+  .suggest li.by:hover { background: none; color: var(--muted); }
+
   .locate {
     display: inline-flex; align-items: center; gap: 7px;
     background: none; border: none; color: var(--accent-ink);
@@ -212,7 +229,7 @@
 
   <section class="setup" id="setup">
     <h2>Connect a Google Maps key to begin</h2>
-    <p>This page runs entirely in your browser. It uses the Maps JavaScript API for the map, your Geocoder for locations, and the Routes API for distance and travel time — all current, non-legacy services. Type a full address or place name into each field. The key stays in this tab only and is sent only to Google.</p>
+    <p>This page runs entirely in your browser using current Google Maps services: Maps JavaScript API for the map, Places API (New) for search suggestions, Geocoding for your location, and the Routes API for distance and travel time. Start typing a place in either field to see suggestions, or paste coordinates as <code>lat, lng</code>. The key stays in this tab only and is sent only to Google.</p>
     <div class="keyrow">
       <input id="keyInput" type="password" placeholder="Paste your Google Maps API key" autocomplete="off" spellcheck="false" />
       <button class="go" id="connectBtn" style="flex:0 0 auto; width:auto; padding:11px 22px;">Connect</button>
@@ -222,9 +239,9 @@
       <summary>How to get a key (2 minutes)</summary>
       <ol>
         <li>Open the <a href="https://console.cloud.google.com/" target="_blank" rel="noopener">Google Cloud Console</a>, create a project, and enable billing (Google gives a recurring free credit).</li>
-        <li>Under <strong>APIs &amp; Services → Library</strong>, enable <code>Maps JavaScript API</code>, <code>Geocoding API</code>, and <code>Routes API</code>. Leave the legacy Directions and Places APIs off — this page doesn't use them.</li>
+        <li>Under <strong>APIs &amp; Services → Library</strong>, enable <code>Maps JavaScript API</code>, <code>Geocoding API</code>, <code>Places API (New)</code>, and <code>Routes API</code>. Leave the legacy Directions and Places APIs off.</li>
         <li>Under <strong>Credentials</strong>, create an API key.</li>
-        <li>Restrict the key to those three APIs, and add an <em>HTTP referrer</em> for the site that serves this file (e.g. <code>https://you.github.io/*</code>). Set a daily quota to cap costs.</li>
+        <li>Restrict the key to those four APIs, and add an <em>HTTP referrer</em> for the site that serves this file (e.g. <code>https://you.github.io/*</code>). Set a daily quota to cap costs.</li>
       </ol>
     </details>
   </section>
@@ -299,8 +316,11 @@
 
   var apiKey = null;
   var map, geocoder;
+  var placesLib = null;             // Places API (New) namespace, once loaded
   var routeLine = null, originMarker = null, destMarker = null;
   var originLatLng = null;          // set when "use my location" is used
+  var originPick = null;            // {lat,lng} chosen from the From suggestions
+  var destPick = null;              // {lat,lng} chosen from the To suggestions
   var selectedMode = "DRIVE";       // Routes API travelMode values
 
   var el = function (id) { return document.getElementById(id); };
@@ -318,7 +338,7 @@
     window.__wpInit = startApp;
     var s = document.createElement("script");
     s.src = "https://maps.googleapis.com/maps/api/js?key=" + encodeURIComponent(k) +
-            "&libraries=geometry&callback=__wpInit&loading=async";
+            "&libraries=geometry,places&callback=__wpInit&loading=async";
     s.async = true;
     s.onerror = function () { msg.textContent = "Could not load the Maps script. Check your network."; };
     window.gm_authFailure = function () {
@@ -343,7 +363,20 @@
       fullscreenControl: true
     });
 
-    el("origin").addEventListener("input", function () { originLatLng = null; });
+    // load Places API (New) for type-ahead suggestions
+    google.maps.importLibrary("places").then(function (lib) {
+      placesLib = lib;
+      attachAutocomplete(el("origin"),
+        function (ll) { originPick = ll; originLatLng = null; },
+        function () { originPick = null; originLatLng = null; });
+      attachAutocomplete(el("dest"),
+        function (ll) { destPick = ll; },
+        function () { destPick = null; });
+    }).catch(function () {
+      // suggestions unavailable; typing addresses/coordinates still works
+      el("origin").addEventListener("input", function () { originPick = null; originLatLng = null; });
+      el("dest").addEventListener("input", function () { destPick = null; });
+    });
 
     Array.prototype.forEach.call(document.querySelectorAll(".modes button"), function (b) {
       b.addEventListener("click", function () {
@@ -394,15 +427,14 @@
 
     var originStr = el("origin").value.trim();
     var destStr = el("dest").value.trim();
-    if ((!originLatLng && !originStr) || !destStr) {
+    var originSel = originLatLng || originPick;
+    if ((!originSel && !originStr) || (!destPick && !destStr)) {
       runMsg.textContent = "Fill in both a start and a destination.";
       return;
     }
 
-    var origin = originLatLng
-      ? { location: { latLng: { latitude: originLatLng.lat, longitude: originLatLng.lng } } }
-      : toWaypoint(originStr);
-    var destination = toWaypoint(destStr);
+    var origin = waypointFor(originStr, originSel);
+    var destination = waypointFor(destStr, destPick);
 
     var body = {
       origin: origin,
@@ -511,6 +543,90 @@
     if (routeLine) routeLine.setMap(null);
     if (originMarker) originMarker.setMap(null);
     if (destMarker) destMarker.setMap(null);
+  }
+
+  // prefer exact coordinates (picked place or geolocation); else parse the typed text
+  function waypointFor(text, sel) {
+    if (sel) return { location: { latLng: { latitude: sel.lat, longitude: sel.lng } } };
+    return toWaypoint(text);
+  }
+
+  // ---------- type-ahead suggestions (Places API New) ----------
+  function attachAutocomplete(input, onPick, onClear) {
+    var box = input.parentElement;           // .inbox (position: relative)
+    var list = document.createElement("ul");
+    list.className = "suggest";
+    list.hidden = true;
+    box.appendChild(list);
+
+    var token = null, items = [], active = -1, timer = null;
+
+    function close() { list.hidden = true; list.innerHTML = ""; items = []; active = -1; }
+
+    input.addEventListener("input", function () {
+      onClear();                             // typing invalidates a prior pick
+      var q = input.value.trim();
+      // skip while it looks like coordinates, or is too short to be useful
+      if (q.length < 3 || toWaypoint(q).location) { close(); return; }
+      clearTimeout(timer);
+      timer = setTimeout(function () { fetchSuggest(q); }, 220);
+    });
+
+    input.addEventListener("keydown", function (e) {
+      if (list.hidden || !items.length) return;
+      if (e.key === "ArrowDown") { e.preventDefault(); active = (active + 1) % items.length; paint(); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); active = (active - 1 + items.length) % items.length; paint(); }
+      else if (e.key === "Enter" && active >= 0) { e.preventDefault(); choose(active); }
+      else if (e.key === "Escape") { close(); }
+    });
+
+    input.addEventListener("blur", function () { setTimeout(close, 150); });
+
+    function fetchSuggest(q) {
+      if (!placesLib) return;
+      if (!token) token = new placesLib.AutocompleteSessionToken();
+      var req = { input: q, sessionToken: token };
+      var b = map && map.getBounds();
+      if (b) req.locationBias = b.toJSON();
+      placesLib.AutocompleteSuggestion.fetchAutocompleteSuggestions(req)
+        .then(function (r) {
+          items = (r.suggestions || [])
+            .filter(function (s) { return s.placePrediction; })
+            .map(function (s) { return { text: s.placePrediction.text.toString(), pred: s.placePrediction }; });
+          active = -1; paint();
+        })
+        .catch(function () { close(); });
+    }
+
+    function paint() {
+      if (!items.length) { close(); return; }
+      list.innerHTML = "";
+      items.forEach(function (it, i) {
+        var li = document.createElement("li");
+        li.textContent = it.text;
+        if (i === active) li.className = "on";
+        li.addEventListener("mousedown", function (e) { e.preventDefault(); choose(i); });
+        list.appendChild(li);
+      });
+      var by = document.createElement("li");
+      by.className = "by"; by.textContent = "powered by Google";
+      list.appendChild(by);
+      list.hidden = false;
+    }
+
+    function choose(i) {
+      var it = items[i];
+      input.value = it.text;
+      var place = it.pred.toPlace();
+      place.fetchFields({ fields: ["location", "formattedAddress"] })
+        .then(function () {
+          if (place.formattedAddress) input.value = place.formattedAddress;
+          if (place.location) onPick({ lat: place.location.lat(), lng: place.location.lng() });
+        })
+        .catch(function () {});
+      token = null;                          // selection ends the billing session
+      close();
+    }
   }
 
   // "25.1728, 55.3085" (comma or space separated) -> location waypoint; anything else -> address
