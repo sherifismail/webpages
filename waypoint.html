@@ -48,7 +48,6 @@
     font-size: 16px;
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
-    /* faint latitude/longitude grid, like a survey sheet */
     background-image:
       linear-gradient(to right, color-mix(in srgb, var(--line) 55%, transparent) 1px, transparent 1px),
       linear-gradient(to bottom, color-mix(in srgb, var(--line) 55%, transparent) 1px, transparent 1px);
@@ -59,7 +58,6 @@
 
   .wrap { max-width: 1180px; margin: 0 auto; padding: 28px clamp(16px, 4vw, 40px) 64px; }
 
-  /* ---- masthead ---- */
   header.top {
     display: flex; align-items: baseline; justify-content: space-between;
     gap: 16px; flex-wrap: wrap;
@@ -80,7 +78,6 @@
   .legend .dot { display: inline-flex; align-items: center; gap: 6px; }
   .legend .pip { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
 
-  /* ---- setup banner ---- */
   .setup {
     background: var(--surface); border: 1.5px solid var(--ink);
     border-radius: 2px; padding: 20px clamp(16px,3vw,26px); margin-bottom: 26px;
@@ -106,7 +103,6 @@
     background: var(--accent-soft); padding: 1px 5px; border-radius: 2px;
   }
 
-  /* ---- main grid ---- */
   .board { display: grid; grid-template-columns: 1.05fr 1.35fr; gap: 22px; align-items: start; }
   @media (max-width: 860px) { .board { grid-template-columns: 1fr; } }
 
@@ -116,7 +112,6 @@
   }
   .panel .pad { padding: clamp(16px, 2.4vw, 24px); }
 
-  /* field with endpoint marker */
   .field { position: relative; margin-bottom: 14px; }
   .field label {
     display: block; font-size: .78rem; font-weight: 600; color: var(--muted);
@@ -145,7 +140,6 @@
   .locate:hover { text-decoration: underline; }
   .locate svg { width: 15px; height: 15px; }
 
-  /* mode segmented control */
   .modes { display: grid; grid-template-columns: repeat(4,1fr); gap: 0; margin-bottom: 18px;
            border: 1.5px solid var(--line-strong); border-radius: 2px; overflow: hidden; }
   .modes button {
@@ -166,7 +160,6 @@
   .go:disabled { opacity: .5; cursor: not-allowed; }
   .go:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 
-  /* result readout */
   .result { border-top: 1.5px dashed var(--line-strong); margin-top: 20px; padding-top: 18px; }
   .result.empty .nums { color: var(--muted); }
   .bignum {
@@ -185,16 +178,9 @@
   .coords .arrow { color: var(--accent); }
   .msg { margin-top: 14px; font-size: .86rem; color: var(--accent-ink); min-height: 1.2em; }
 
-  /* map */
   .mapframe { border: 1.5px solid var(--ink); border-radius: 2px; overflow: hidden;
               box-shadow: var(--shadow); background: var(--map-frame); }
   #map { width: 100%; height: clamp(360px, 62vh, 620px); }
-  .mapplaceholder {
-    width: 100%; height: clamp(360px, 62vh, 620px); display: flex; flex-direction: column;
-    align-items: center; justify-content: center; gap: 10px; color: var(--muted);
-    font-family: "Space Mono", monospace; font-size: .8rem; text-align: center; padding: 20px;
-  }
-  .mapplaceholder svg { width: 40px; height: 40px; opacity: .5; }
 
   footer { margin-top: 30px; color: var(--muted); font-size: .8rem; border-top: 1px solid var(--line); padding-top: 14px; }
   footer code { font-family: "Space Mono", monospace; }
@@ -224,10 +210,9 @@
     </div>
   </header>
 
-  <!-- shown until a key is connected -->
   <section class="setup" id="setup">
     <h2>Connect a Google Maps key to begin</h2>
-    <p>This page runs entirely in your browser using the Google Maps JavaScript API. Paste a key below to load the map and route lookup, then type a full address or place name into each field. The key stays in this tab only and is never sent anywhere except Google.</p>
+    <p>This page runs entirely in your browser. It uses the Maps JavaScript API for the map, your Geocoder for locations, and the Routes API for distance and travel time — all current, non-legacy services. Type a full address or place name into each field. The key stays in this tab only and is sent only to Google.</p>
     <div class="keyrow">
       <input id="keyInput" type="password" placeholder="Paste your Google Maps API key" autocomplete="off" spellcheck="false" />
       <button class="go" id="connectBtn" style="flex:0 0 auto; width:auto; padding:11px 22px;">Connect</button>
@@ -236,15 +221,14 @@
     <details class="help">
       <summary>How to get a key (2 minutes)</summary>
       <ol>
-        <li>Open the <a href="https://console.cloud.google.com/" target="_blank" rel="noopener">Google Cloud Console</a> and create a project, then enable billing (Google gives a recurring free credit).</li>
-        <li>Under <strong>APIs &amp; Services → Library</strong>, enable <code>Maps JavaScript API</code>, <code>Geocoding API</code>, and <code>Directions API</code>.</li>
+        <li>Open the <a href="https://console.cloud.google.com/" target="_blank" rel="noopener">Google Cloud Console</a>, create a project, and enable billing (Google gives a recurring free credit).</li>
+        <li>Under <strong>APIs &amp; Services → Library</strong>, enable <code>Maps JavaScript API</code>, <code>Geocoding API</code>, and <code>Routes API</code>. Leave the legacy Directions and Places APIs off — this page doesn't use them.</li>
         <li>Under <strong>Credentials</strong>, create an API key.</li>
-        <li>Restrict the key to those three APIs, and add an <em>HTTP referrer</em> restriction for the domain where you host this file. Set a daily quota so costs stay capped.</li>
+        <li>Restrict the key to those three APIs, and add an <em>HTTP referrer</em> for the site that serves this file (e.g. <code>https://you.github.io/*</code>). Set a daily quota to cap costs.</li>
       </ol>
     </details>
   </section>
 
-  <!-- main board, hidden until connected -->
   <div class="board" id="board" hidden>
     <section class="panel">
       <div class="pad">
@@ -270,15 +254,15 @@
         </div>
 
         <div class="modes" role="group" aria-label="Travel mode">
-          <button type="button" data-mode="DRIVING" aria-pressed="true">
+          <button type="button" data-mode="DRIVE" aria-pressed="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 13l1.5-4.5A2 2 0 0 1 8.4 7h7.2a2 2 0 0 1 1.9 1.5L19 13v5H5z"/><circle cx="7.5" cy="15.5" r="1"/><circle cx="16.5" cy="15.5" r="1"/></svg>
             Drive
           </button>
-          <button type="button" data-mode="WALKING" aria-pressed="false">
+          <button type="button" data-mode="WALK" aria-pressed="false">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="13" cy="4.5" r="1.6"/><path d="M11 9l-2 4 2 1 1 6M11 9l3 1 2 3M9 13l-2 5"/></svg>
             Walk
           </button>
-          <button type="button" data-mode="BICYCLING" aria-pressed="false">
+          <button type="button" data-mode="BICYCLE" aria-pressed="false">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/><path d="M6 17l4-8h5l-2 8M10 9h4" stroke-linecap="round"/></svg>
             Bike
           </button>
@@ -305,7 +289,7 @@
   </div>
 
   <footer>
-    Built on the Google Maps JavaScript API (Maps, Places, Directions). Distances follow roads and the chosen travel mode — for straight-line distance you'd use the haversine formula instead. Usage is billed to your own Google Cloud project.
+    Built on current Google Maps Platform services: Maps JavaScript API, Geocoding API, and the Routes API. Distances follow roads and the chosen travel mode. Usage is billed to your own Google Cloud project.
   </footer>
 </div>
 
@@ -314,13 +298,13 @@
   "use strict";
 
   var apiKey = null;
-  var map, directionsService, directionsRenderer, geocoder;
-  var originLatLng = null;         // set when "use my location" is used
-  var selectedMode = "DRIVING";
+  var map, geocoder;
+  var routeLine = null, originMarker = null, destMarker = null;
+  var originLatLng = null;          // set when "use my location" is used
+  var selectedMode = "DRIVE";       // Routes API travelMode values
 
   var el = function (id) { return document.getElementById(id); };
 
-  // ---------- key connection ----------
   el("connectBtn").addEventListener("click", connect);
   el("keyInput").addEventListener("keydown", function (e) { if (e.key === "Enter") connect(); });
 
@@ -328,51 +312,39 @@
     var k = el("keyInput").value.trim();
     var msg = el("setupMsg");
     if (!k) { msg.textContent = "Paste a key first."; return; }
-    msg.textContent = "Loading Google Maps…";
+    msg.textContent = "Loading Google Maps\u2026";
     apiKey = k;
 
-    // expose the callback Google will call once the library loads
     window.__wpInit = startApp;
     var s = document.createElement("script");
     s.src = "https://maps.googleapis.com/maps/api/js?key=" + encodeURIComponent(k) +
-            "&callback=__wpInit&loading=async";
+            "&libraries=geometry&callback=__wpInit&loading=async";
     s.async = true;
     s.onerror = function () { msg.textContent = "Could not load the Maps script. Check your network."; };
-    // Google reports key problems via an auth failure callback:
     window.gm_authFailure = function () {
-      msg.textContent = "Google rejected this key. Check that it's valid, billing is on, and the three APIs are enabled.";
+      msg.textContent = "Google rejected this key for the map. Check billing is on and that Maps JavaScript API is enabled and allowed on the key.";
       el("board").hidden = true;
       el("setup").hidden = false;
     };
     document.head.appendChild(s);
   }
 
-  // ---------- app start ----------
   function startApp() {
     el("setup").hidden = true;
     el("board").hidden = false;
 
-    directionsService = new google.maps.DirectionsService();
     geocoder = new google.maps.Geocoder();
 
     map = new google.maps.Map(el("map"), {
-      center: { lat: 25.197, lng: 55.274 }, // Dubai, as a neutral starting view
+      center: { lat: 25.197, lng: 55.274 },
       zoom: 11,
       mapTypeControl: false,
       streetViewControl: false,
       fullscreenControl: true
     });
 
-    directionsRenderer = new google.maps.DirectionsRenderer({
-      map: map,
-      suppressMarkers: false,
-      polylineOptions: { strokeColor: cssVar("--accent"), strokeWeight: 5, strokeOpacity: 0.9 }
-    });
-
-    // typing a new origin cancels the "use my location" override
     el("origin").addEventListener("input", function () { originLatLng = null; });
 
-    // mode buttons
     Array.prototype.forEach.call(document.querySelectorAll(".modes button"), function (b) {
       b.addEventListener("click", function () {
         selectedMode = b.getAttribute("data-mode");
@@ -394,15 +366,15 @@
   function useMyLocation() {
     var msg = el("runMsg");
     if (!navigator.geolocation) { msg.textContent = "This browser has no geolocation support."; return; }
-    msg.textContent = "Finding your location…";
+    msg.textContent = "Finding your location\u2026";
     el("locateBtn").disabled = true;
     navigator.geolocation.getCurrentPosition(
       function (pos) {
-        originLatLng = new google.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
+        originLatLng = { lat: pos.coords.latitude, lng: pos.coords.longitude };
         map.setCenter(originLatLng);
         geocoder.geocode({ location: originLatLng }, function (res, status) {
           el("origin").value = (status === "OK" && res[0]) ? res[0].formatted_address
-            : pos.coords.latitude.toFixed(5) + ", " + pos.coords.longitude.toFixed(5);
+            : originLatLng.lat.toFixed(5) + ", " + originLatLng.lng.toFixed(5);
         });
         msg.textContent = "Located you. Now set a destination.";
         el("locateBtn").disabled = false;
@@ -415,80 +387,140 @@
     );
   }
 
-  // ---------- measure ----------
+  // ---------- measure (Routes API) ----------
   function measure() {
     var runMsg = el("runMsg");
     runMsg.textContent = "";
 
-    var destStr = el("dest").value.trim();
     var originStr = el("origin").value.trim();
-    var origin = originLatLng || originStr;
+    var destStr = el("dest").value.trim();
+    if ((!originLatLng && !originStr) || !destStr) {
+      runMsg.textContent = "Fill in both a start and a destination.";
+      return;
+    }
 
-    if (!origin || !destStr) { runMsg.textContent = "Fill in both a start and a destination."; return; }
+    var origin = originLatLng
+      ? { location: { latLng: { latitude: originLatLng.lat, longitude: originLatLng.lng } } }
+      : { address: originStr };
+    var destination = { address: destStr };
+
+    var body = {
+      origin: origin,
+      destination: destination,
+      travelMode: selectedMode,
+      computeAlternativeRoutes: false,
+      units: "METRIC"
+    };
+    if (selectedMode === "DRIVE") body.routingPreference = "TRAFFIC_UNAWARE";
 
     el("measureBtn").disabled = true;
-    el("measureBtn").textContent = "Measuring…";
+    el("measureBtn").textContent = "Measuring\u2026";
 
-    directionsService.route({
-      origin: origin,
-      destination: destStr,
-      travelMode: google.maps.TravelMode[selectedMode],
-      provideRouteAlternatives: false
-    }, function (res, status) {
+    fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": apiKey,
+        "X-Goog-FieldMask": "routes.distanceMeters,routes.duration,routes.polyline.encodedPolyline,routes.legs.startLocation,routes.legs.endLocation"
+      },
+      body: JSON.stringify(body)
+    })
+    .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+    .then(function (out) {
       el("measureBtn").disabled = false;
       el("measureBtn").textContent = "Measure route";
 
-      if (status !== "OK" || !res.routes.length) {
-        showError(statusMessage(status));
+      if (!out.ok || !out.data.routes || !out.data.routes.length) {
+        var reason = out.data && out.data.error && out.data.error.message
+          ? out.data.error.message
+          : "No route found for those points and this travel mode.";
+        showError(reason);
         return;
       }
-      directionsRenderer.setDirections(res);
-      var leg = res.routes[0].legs[0];
-      render(leg);
+      render(out.data.routes[0]);
+    })
+    .catch(function (e) {
+      el("measureBtn").disabled = false;
+      el("measureBtn").textContent = "Measure route";
+      showError("Request failed: " + e.message + " (check that the Routes API is enabled and allowed on your key).");
     });
   }
 
-  function render(leg) {
-    var km = leg.distance.value / 1000;
+  function render(route) {
+    var km = route.distanceMeters / 1000;
+    var seconds = parseInt(route.duration, 10) || 0;
+
     var bn = el("distance");
     bn.classList.remove("dim");
     bn.innerHTML = fmt(km) + '<span class="unit">km</span>';
 
     var miles = km * 0.621371;
-    el("duration").innerHTML = "About <strong>" + leg.duration.text + "</strong> · " + fmt(miles) + " mi";
+    el("duration").innerHTML = "About <strong>" + durText(seconds) + "</strong> \u00b7 " + fmt(miles) + " mi";
 
-    var o = leg.start_location, d = leg.end_location;
-    el("coords").innerHTML =
-      esc(leg.start_address) + "<br>" +
-      coord(o) + ' <span class="arrow">→</span> ' + coord(d) + "<br>" +
-      esc(leg.end_address);
+    var leg = route.legs && route.legs[0];
+    var o = leg && leg.startLocation && leg.startLocation.latLng;
+    var d = leg && leg.endLocation && leg.endLocation.latLng;
+    if (o && d) {
+      el("coords").innerHTML =
+        coord(o) + ' <span class="arrow">\u2192</span> ' + coord(d);
+    }
 
+    drawRoute(route, o, d);
     el("result").classList.remove("empty");
+  }
+
+  function drawRoute(route, o, d) {
+    if (routeLine) routeLine.setMap(null);
+    if (originMarker) originMarker.setMap(null);
+    if (destMarker) destMarker.setMap(null);
+
+    var path = google.maps.geometry.encoding.decodePath(route.polyline.encodedPolyline);
+    routeLine = new google.maps.Polyline({
+      path: path, map: map,
+      strokeColor: cssVar("--accent"), strokeWeight: 5, strokeOpacity: 0.9
+    });
+
+    var bounds = new google.maps.LatLngBounds();
+    path.forEach(function (p) { bounds.extend(p); });
+    map.fitBounds(bounds, 48);
+
+    if (o) originMarker = pin(o, cssVar("--ink"));
+    if (d) destMarker = pin(d, cssVar("--accent"));
+  }
+
+  function pin(latLng, color) {
+    return new google.maps.Marker({
+      position: { lat: latLng.latitude, lng: latLng.longitude },
+      map: map,
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 7, fillColor: color, fillOpacity: 1,
+        strokeColor: "#ffffff", strokeWeight: 2.5
+      }
+    });
   }
 
   function showError(text) {
     var bn = el("distance");
     bn.classList.add("dim");
-    bn.innerHTML = '—<span class="unit">km</span>';
+    bn.innerHTML = '\u2014<span class="unit">km</span>';
     el("duration").textContent = "";
-    el("coords").textContent = "No route found.";
+    el("coords").textContent = "No route.";
     el("runMsg").textContent = text;
     el("result").classList.add("empty");
-  }
-
-  function statusMessage(status) {
-    switch (status) {
-      case "ZERO_RESULTS": return "No route exists between those points for this travel mode. Try driving, or check the places.";
-      case "NOT_FOUND": return "One of the places couldn't be found. Try a more specific address.";
-      case "OVER_QUERY_LIMIT": return "Query limit reached on this key. Check your Google Cloud quota.";
-      case "REQUEST_DENIED": return "Request denied — the Directions service may not be enabled for this key.";
-      default: return "Couldn't compute the route (" + status + ").";
-    }
+    if (routeLine) routeLine.setMap(null);
+    if (originMarker) originMarker.setMap(null);
+    if (destMarker) destMarker.setMap(null);
   }
 
   function fmt(n) { return n >= 100 ? Math.round(n).toString() : n.toFixed(1); }
-  function coord(latLng) { return latLng.lat().toFixed(4) + ", " + latLng.lng().toFixed(4); }
-  function esc(s) { var d = document.createElement("div"); d.textContent = s || ""; return d.innerHTML; }
+  function durText(s) {
+    var h = Math.floor(s / 3600), m = Math.round((s % 3600) / 60);
+    if (h) return h + " hr " + m + " min";
+    if (m) return m + " min";
+    return "under a minute";
+  }
+  function coord(latLng) { return latLng.latitude.toFixed(4) + ", " + latLng.longitude.toFixed(4); }
 })();
 </script>
 </body>
